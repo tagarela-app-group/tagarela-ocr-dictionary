@@ -14,13 +14,14 @@ Foto → texto (OCR) → palavras com significado. Reaproveita resultado já con
 - **Definição**: texto do dicionário externo, inglês → inglês. Sem tradução.
 - **Fonte** (`source`): de onde veio a palavra na resposta. `cache`, `database` ou `dictionary`.
 - **Idioma**: fixo por env (`LEXICAL_LANGUAGE`, padrão `en`).
+- **Conta**: e-mail (único, verificado por código) + nome. Entra por senha, Google ou Apple. Google/Apple com mesmo e-mail = mesma conta.
 
 ## Escopo
 
-- Feito (v1): imagem JPEG/PNG/WEBP até 10 MB → texto extraído + definições por palavra. Health check. Admin pra ver entradas salvas.
-- Próximo: áudio.
+- Feito (v1): imagem JPEG/PNG/WEBP até 10 MB → texto extraído + definições por palavra. Health check. Admin pra ver entradas salvas. Conta: cadastro com código no e-mail, login, esqueci a senha por código, Google e Apple (Apple só iOS), token JWT.
+- Próximo: áudio. Exigir login nas rotas `/api/v1`.
 - Em análise: idioma vir na rota (hoje env).
 
 ## Lacunas vs app
 
-App espera e API não tem: tradução pt-BR, fonética, exemplo, grupo sugerido, expressão, captura por texto, usuário/auth, vocabulário, grupos, inbox, SRS, palavra do dia. App hoje usa mock (json-server), não esta API.
+App espera e API não tem: tradução pt-BR, fonética, exemplo, grupo sugerido, expressão, captura por texto, vocabulário, grupos, inbox, SRS, palavra do dia. App hoje usa mock (json-server), não esta API.
