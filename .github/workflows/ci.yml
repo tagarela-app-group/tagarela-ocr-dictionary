@@ -7,7 +7,6 @@ on:
     branches: [develop, main]
   workflow_dispatch:
 
-# Push novo no mesmo PR cancela a rodada anterior.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -16,7 +15,6 @@ permissions:
   contents: read
 
 env:
-  # Mesma versão do Dockerfile (python:3.12-slim).
   PYTHON_VERSION: "3.12"
 
 jobs:
@@ -24,7 +22,6 @@ jobs:
     name: Formato, análise, migrations e testes
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    # Credenciais = padrão do config/settings.py: testes conectam sem env.
     services:
       db:
         image: postgres:16-alpine
@@ -51,7 +48,6 @@ jobs:
       - name: Ferramentas (ruff, coverage)
         run: pip install -r requirements-dev.txt
 
-      # Antes das dependências pesadas (Paddle): erro de formato falha rápido.
       - name: Formato
         run: ruff format --check .
 
@@ -95,8 +91,6 @@ jobs:
           cache: pip
           cache-dependency-path: requirements*.txt
 
-      # requirements.txt usa faixa de versão: audita o que o pip resolveu,
-      # transitivas incluídas. Congela antes de instalar o pip-audit.
       - name: Dependências
         run: |
           pip install -r requirements.txt
@@ -117,7 +111,6 @@ jobs:
       - name: .env de exemplo
         run: cp .env.example .env
 
-      # Volume vazio: passa pelo initdb do Postgres, igual à 1ª subida local.
       - name: Build e subida
         run: docker compose up --build --detach --wait --wait-timeout 120
 
