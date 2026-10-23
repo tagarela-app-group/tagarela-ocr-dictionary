@@ -4,7 +4,8 @@ from django.db.utils import OperationalError
 from redis import Redis
 from redis.exceptions import RedisError
 from rest_framework import status
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, authentication_classes, permission_classes
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
 
@@ -27,6 +28,8 @@ def _redis_status() -> bool:
 
 
 @api_view(["GET"])
+@authentication_classes([])
+@permission_classes([AllowAny])
 def health(request):
     checks = {
         "database": _database_status(),
