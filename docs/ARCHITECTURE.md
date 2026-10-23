@@ -190,7 +190,7 @@ Fixo em settings (sem env): content types e formatos aceitos, `LANGUAGE_CODE` pt
 Subir: `README.md`. Comandos via `docker compose exec`:
 
 - Testes: `api python manage.py test`. Cobertura: `api sh -c "pip install -r requirements-dev.txt && coverage run manage.py test && coverage report"`.
-- Migration: `api python manage.py makemigrations` / `migrate`.
+- Migration: `api python manage.py makemigrations`. `migrate` roda sozinho na subida do `api`.
 - Admin: `api python manage.py createsuperuser` (pede e-mail) → http://localhost:8000/admin/.
 - Código de verificação/reset no dev: `docker compose logs api` (e-mail no console).
 - Postgres: `db psql -U <POSTGRES_USER> -d <POSTGRES_DB>` → `SELECT id, word, normalized_word, language, source, data, created_at FROM lexical_lexicalentry ORDER BY id DESC;`
@@ -201,7 +201,7 @@ Formato e análise: fora do container (ruff não está na imagem). Venv local: `
 
 Compose: `api` só sobe com `db` healthy. Healthcheck `pg_isready -h 127.0.0.1`: `-h` força TCP, porque no initdb o servidor temporário só aceita socket local e daria falso pronto.
 
-Servidor = `runserver` (dev, hot reload pelo volume `.:/app`). Sem setup de produção.
+Servidor = `runserver` (dev, hot reload pelo volume `.:/app`). Subida do `api`: `migrate` e depois `runserver`. Migration falhou: container para, erro em `docker compose logs api`. Sem setup de produção (lá, `migrate` vai num passo de deploy, fora do servidor).
 
 ## Convenções
 

@@ -7,7 +7,6 @@ Comece por [CLAUDE.md](CLAUDE.md).
 ```sh
 cp .env.example .env
 docker compose up --build
-docker compose exec api python manage.py migrate
 ```
 
 API em http://localhost:8000.
