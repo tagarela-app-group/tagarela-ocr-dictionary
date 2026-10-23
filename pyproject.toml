@@ -1,0 +1,15 @@
+# Só config de ferramenta (ruff, coverage). Dependências ficam nos requirements.
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+# Migration é gerada pelo Django e nunca é editada depois de mergeada.
+extend-exclude = ["*/migrations/*"]
+
+[tool.ruff.lint]
+# Regras padrão do ruff. RUF012 fora: Django declara Meta (constraints, indexes) com lista.
+ignore = ["RUF012"]
+
+[tool.coverage.run]
+source = ["apps", "config"]
+omit = ["*/migrations/*", "*/tests/*", "*/tests.py"]

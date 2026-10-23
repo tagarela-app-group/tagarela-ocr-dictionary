@@ -1,5 +1,5 @@
-from PIL import Image, UnidentifiedImageError
 from django.conf import settings
+from PIL import Image, UnidentifiedImageError
 from rest_framework import serializers
 
 

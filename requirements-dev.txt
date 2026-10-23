@@ -1,0 +1,5 @@
+# Só dev e esteira. Não entra na imagem.
+# ruff fixo: versão nova muda formatação.
+ruff==0.16.10
+coverage>=7.10,<8.0
+pip-audit>=2.10,<3.0

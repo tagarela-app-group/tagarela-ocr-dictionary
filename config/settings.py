@@ -65,9 +65,7 @@ DATABASES = {
 
 REDIS_URL = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
 
-OCR_MAX_IMAGE_SIZE_BYTES = int(
-    os.environ.get("OCR_MAX_IMAGE_SIZE_BYTES", 10 * 1024 * 1024)
-)
+OCR_MAX_IMAGE_SIZE_BYTES = int(os.environ.get("OCR_MAX_IMAGE_SIZE_BYTES", str(10 * 1024 * 1024)))
 OCR_ALLOWED_CONTENT_TYPES = {
     "image/jpeg",
     "image/png",
@@ -80,16 +78,12 @@ OCR_ALLOWED_FORMATS = {
 }
 
 LEXICAL_LANGUAGE = os.environ.get("LEXICAL_LANGUAGE", "en")
-LEXICAL_CACHE_TTL_SECONDS = int(
-    os.environ.get("LEXICAL_CACHE_TTL_SECONDS", 24 * 60 * 60)
-)
+LEXICAL_CACHE_TTL_SECONDS = int(os.environ.get("LEXICAL_CACHE_TTL_SECONDS", str(24 * 60 * 60)))
 DICTIONARY_API_BASE_URL = os.environ.get(
     "DICTIONARY_API_BASE_URL",
     "https://api.dictionaryapi.dev/api/v2/entries",
 )
-DICTIONARY_API_TIMEOUT_SECONDS = float(
-    os.environ.get("DICTIONARY_API_TIMEOUT_SECONDS", 5)
-)
+DICTIONARY_API_TIMEOUT_SECONDS = float(os.environ.get("DICTIONARY_API_TIMEOUT_SECONDS", "5"))
 
 REST_FRAMEWORK = {
     "DEFAULT_RENDERER_CLASSES": [
