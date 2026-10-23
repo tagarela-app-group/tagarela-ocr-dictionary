@@ -156,13 +156,15 @@ Subir: `README.md`. Comandos via `docker compose exec`:
 
 Formato e análise: fora do container (ruff não está na imagem). Venv local: `python -m venv .venv` → `pip install -r requirements-dev.txt` → `ruff format .`, `ruff check --fix .`.
 
+Compose: `api` só sobe com `db` healthy. Healthcheck `pg_isready -h 127.0.0.1`: `-h` força TCP, porque no initdb o servidor temporário só aceita socket local e daria falso pronto.
+
 Servidor = `runserver` (dev, hot reload pelo volume `.:/app`). Sem setup de produção.
 
 ## Convenções
 
 - Código (nomes, classes) em inglês. Texto pro usuário (erro) e docs em pt-BR.
 - Import absoluto: `apps.<app>.<módulo>`, `config.<módulo>`.
-- Formato e análise: ruff (`pyproject.toml`). Regras padrão do ruff (menos RUF012), linha 100, migrations fora.
+- Formato e análise: ruff (`pyproject.toml`). Regras padrão do ruff, linha 100, migrations fora (geradas pelo Django). RUF012 desligada: Django declara `Meta` (constraints, indexes) com lista.
 - Aspas duplas. Type hints nas assinaturas.
 - View: função com `@api_view`.
 - Nomes: `<X>Provider` (externo), `<X>Service` (regra), `<X>Serializer`, `<X>Cache`.
@@ -193,9 +195,9 @@ Servidor = `runserver` (dev, hot reload pelo volume `.:/app`). Sem setup de prod
 - Branches: `main` = produção. `develop` = integração. Cada mudança = branch nova a partir da `develop`: `feat/`, `fix/`, `docs/`, `ci/`, `chore/` + nome curto.
 - Fluxo: branch → commit → push → PR pra `develop`. Esteira verde → squash merge, branch apagada. Release: PR `develop` → `main` (merge commit), aprovado pelo usuário.
 - Commit: Conventional Commits em pt-BR (ex.: `feat: análise de áudio`).
-- Esteira: `.github/workflows/ci.yml`. Roda em todo PR e push na `develop`/`main`.
-  - Formato, análise, migrations e testes: `ruff format --check`, `ruff check` (antes de instalar Paddle: falha rápido), `manage.py check`, `makemigrations --check --dry-run`, `coverage run manage.py test` com Postgres 16 como service. Cobertura no resumo da rodada + artefato `cobertura` (`coverage.xml`), 7 dias.
-  - Dependências vulneráveis: instala `requirements.txt`, congela (`pip freeze`) e roda `pip-audit` no resultado, transitivas incluídas. Vulnerabilidade conhecida reprova o PR.
+- Esteira: `.github/workflows/ci.yml`. Roda em todo PR e push na `develop`/`main`. Push novo no mesmo PR cancela a rodada anterior.
+  - Formato, análise, migrations e testes: `ruff format --check`, `ruff check` (antes de instalar Paddle: falha rápido), `manage.py check`, `makemigrations --check --dry-run`, `coverage run manage.py test` com Postgres 16 como service (credenciais = padrão do `config/settings.py`, sem env). Cobertura no resumo da rodada + artefato `cobertura` (`coverage.xml`), 7 dias.
+  - Dependências vulneráveis: instala `requirements.txt`, congela (`pip freeze`, antes de instalar o pip-audit) e roda `pip-audit` no resultado, transitivas incluídas. Motivo: `requirements.txt` em faixa, então audita o que o pip resolveu. Vulnerabilidade conhecida reprova o PR.
   - Docker: `docker compose up --build --wait` com `.env.example` e volume vazio (passa pelo initdb) + `GET /health` 200. Falhou: logs do compose na rodada.
 - Python da esteira = `PYTHON_VERSION` no workflow = imagem do `Dockerfile`. Subiu um: subir o outro junto.
 - Sem lockfile: `requirements.txt` em faixa, esteira instala a última versão dentro dela. Release nova de dependência pode quebrar a esteira sem mudança no código.
