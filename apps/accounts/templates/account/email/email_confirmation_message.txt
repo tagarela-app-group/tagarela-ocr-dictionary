@@ -4,4 +4,6 @@
 
 {{ code }}
 
+O código vale {{ code_minutes }} minutos.
+
 Digite no app pra continuar. Se você não criou conta, ignore este e-mail.{% endautoescape %}{% endblock content %}

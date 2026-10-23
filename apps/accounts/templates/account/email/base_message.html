@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<meta name="supported-color-schemes" content="light">
+<title>{% block title %}{% endblock title %}</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,800&amp;family=DM+Sans:opsz,wght@9..40,400..700&amp;display=swap">
+</head>
+<body style="margin: 0; padding: 0; background: #F5F4FA; -webkit-font-smoothing: antialiased">
+<div style="display: none; max-height: 0; overflow: hidden; opacity: 0">{% block preheader %}{% endblock preheader %}</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background: #F5F4FA">
+<tr>
+<td align="center" style="padding: 32px 16px">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width: 520px">
+<tr>
+<td style="padding: 0 4px 20px">
+<table role="presentation" cellpadding="0" cellspacing="0" border="0">
+<tr>
+<td width="40" height="40" align="center" valign="middle" style="width: 40px; height: 40px; border-radius: 14px 14px 14px 4px; background: #FFB23F; color: #17152B; font-family: 'Bricolage Grotesque', 'Trebuchet MS', Arial, sans-serif; font-size: 24px; font-weight: 800; line-height: 40px">t</td>
+<td style="padding-left: 10px; font-family: 'Bricolage Grotesque', 'Trebuchet MS', Arial, sans-serif; font-size: 24px; font-weight: 800; letter-spacing: -0.03em; color: #17152B">tagarela</td>
+</tr>
+</table>
+</td>
+</tr>
+<tr>
+<td style="background: #FFFFFF; border: 1px solid #ECEAF6; border-radius: 24px; padding: 32px 28px; font-family: 'DM Sans', 'Segoe UI', Helvetica, Arial, sans-serif; color: #17152B">
+<h1 style="margin: 0 0 12px; font-family: 'Bricolage Grotesque', 'Trebuchet MS', Arial, sans-serif; font-size: 26px; line-height: 32px; font-weight: 800; letter-spacing: -0.02em; color: #17152B">{% block heading %}{% endblock heading %}</h1>
+{% block content %}{% endblock content %}
+<p style="margin: 28px 0 0; padding-top: 20px; border-top: 1px solid #ECEAF6; font-size: 14px; line-height: 21px; color: #615E78">{% block footnote %}{% endblock footnote %}</p>
+</td>
+</tr>
+<tr>
+<td align="center" style="padding: 20px 4px 0; font-family: 'DM Sans', 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 13px; line-height: 19px; color: #615E78">Equipe Tagarela · inglês de verdade, tirado das conversas do seu dia.</td>
+</tr>
+</table>
+</td>
+</tr>
+</table>
+</body>
+</html>
