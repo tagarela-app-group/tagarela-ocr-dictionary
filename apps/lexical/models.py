@@ -18,7 +18,10 @@ class LexicalEntry(models.Model):
             )
         ]
         indexes = [
-            models.Index(fields=["language", "normalized_word"]),
+            models.Index(
+                fields=["language", "normalized_word"],
+                name="lexical_ent_languag_f32419_idx",
+            ),
         ]
 
     def __str__(self) -> str:
