@@ -165,7 +165,7 @@ Sem barra final. Sem throttle. Resposta só JSON. `/api/v1` sem auth. Rotas de a
 | --- | --- | --- |
 | `DJANGO_SECRET_KEY` | inseguro, só dev | |
 | `DJANGO_DEBUG` | `False` | |
-| `DJANGO_ALLOWED_HOSTS` | `localhost,127.0.0.1` | separado por vírgula |
+| `DJANGO_ALLOWED_HOSTS` | `localhost,127.0.0.1` | separado por vírgula. `.env.example` inclui `10.0.2.2` (emulador Android). Celular físico: IP do PC na rede |
 | `POSTGRES_DB`, `_USER`, `_PASSWORD` | `tagarela` | |
 | `POSTGRES_HOST`, `_PORT` | `localhost`, `5432` | compose: `db` |
 | `REDIS_URL` | `redis://localhost:6379/0` | compose: `redis` |
