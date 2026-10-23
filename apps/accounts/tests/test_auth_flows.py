@@ -27,6 +27,11 @@ class AuthFlowTestCase(TestCase):
     def last_code(self) -> str:
         return re.search(r"\b\d{6}\b", mail.outbox[-1].body).group()
 
+    def last_html(self) -> str:
+        return next(
+            content for content, mimetype in mail.outbox[-1].alternatives if mimetype == "text/html"
+        )
+
     def pending_flow(self, response) -> str:
         return next(
             flow["id"] for flow in response.json()["data"]["flows"] if flow.get("is_pending")
@@ -68,6 +73,22 @@ class SignupTests(AuthFlowTestCase):
         self.assertEqual(mail.outbox[-1].subject, "[Tagarela] Confirme seu e-mail")
         self.assertNotIn("navegador", mail.outbox[-1].body)
 
+    def test_code_email_has_html_version_with_code_and_validity(self):
+        self.signup()
+
+        html = self.last_html()
+        self.assertIn(self.last_code(), html)
+        self.assertIn("Confirme seu e-mail", html)
+        self.assertIn("O código vale 15 minutos.", html)
+        self.assertIn("O código vale 15 minutos.", mail.outbox[-1].body)
+        self.assertNotIn("<a ", html)
+
+    @override_settings(AUTH_CODE_TTL_SECONDS=600)
+    def test_code_validity_follows_setting(self):
+        self.signup()
+
+        self.assertIn("O código vale 10 minutos.", self.last_html())
+
     def test_wrong_code_is_rejected(self):
         session_token = self.signup().json()["meta"]["session_token"]
         wrong = "000000" if self.last_code() != "000000" else "111111"
@@ -94,6 +115,9 @@ class SignupTests(AuthFlowTestCase):
         self.assertEqual(mail.outbox[-1].subject, "[Tagarela] Você já tem conta no Tagarela")
         self.assertIn("Esqueci minha senha", mail.outbox[-1].body)
         self.assertNotIn("http", mail.outbox[-1].body)
+        self.assertIn("ana@example.com", self.last_html())
+        self.assertIn("Esqueci minha senha", self.last_html())
+        self.assertNotIn("<a ", self.last_html())
 
     def test_signup_rejects_missing_name_and_weak_password(self):
         for data, param in [({"name": ""}, "name"), ({"password": "123"}, "password")]:
@@ -181,6 +205,8 @@ class PasswordResetTests(AuthFlowTestCase):
 
         self.assertEqual(check.status_code, 200)
         self.assertEqual(mail.outbox[0].subject, "[Tagarela] Código pra nova senha")
+        self.assertIn(code, self.last_html())
+        self.assertIn("Crie uma nova senha", self.last_html())
         self.assertEqual(response.status_code, 200)
         self.assertIn("access_token", response.json()["meta"])
         user.refresh_from_db()

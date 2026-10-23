@@ -108,7 +108,8 @@ Lookup, em lote:
 - Senha: validadores padrão do Django (mín. 8, não comum, não só número, não parecida com o e-mail). Mensagem pt-BR.
 - Anti-enumeração: cadastro com e-mail existente e reset de e-mail desconhecido respondem igual ao caso normal. E-mail existente recebe aviso sem link. E-mail desconhecido não recebe nada (`ACCOUNT_EMAIL_UNKNOWN_ACCOUNTS = False`). Sem link porque não há frontend web (`HEADLESS_ONLY`).
 - Social: provider sem client ID na env fica desligado. `GOOGLE_CLIENT_ID` = client ID web (o `serverClientId` do app; é o `aud` do id_token). `APPLE_CLIENT_ID` = bundle ID do iOS (lista por vírgula). Apple só no iOS: Android exigiria fluxo web + endpoint de callback. E-mail verificado pelo provider = entra na conta que já tem esse e-mail. Nome: Google manda; Apple não manda no token (`name` vazio).
-- E-mail: `EMAIL_BACKEND` console no dev (código sai em `docker compose logs api`). Produção: SMTP via `EMAIL_*`. Assunto com prefixo `[Tagarela] `. Templates pt-BR sobrescrevem os do allauth (`apps.accounts` antes do allauth em `INSTALLED_APPS`).
+- E-mail: dev manda SMTP pro Mailpit do compose (caixa de entrada em http://localhost:8025, porta SMTP 1025, aceita qualquer login). Produção: SMTP real via `EMAIL_*`. Assunto com prefixo `[Tagarela] `. Templates pt-BR sobrescrevem os do allauth (`apps.accounts` antes do allauth em `INSTALLED_APPS`).
+- Templates em `apps/accounts/templates/account/email/`: cada mensagem tem `.txt` e `.html` (multipart; o cliente escolhe). HTML em `base_message.html` (tabelas + estilo inline, cores do design system, sem links), código em `code_block.html`. Cadastro usa `email_confirmation_signup_message.*`, que inclui o `email_confirmation_message.*`. `AccountAdapter.send_mail` põe `code_minutes` (de `AUTH_CODE_TTL_SECONDS`) no contexto. Visual validado no mockup (linha E-mails).
 - Rate limit: padrão do allauth, guardado no cache do Django (LocMem, por processo).
 - `/api/v1` (OCR) continua sem login.
 
@@ -179,8 +180,8 @@ Sem barra final. Sem throttle. Resposta só JSON. `/api/v1` sem auth. Rotas de a
 | `AUTH_CODE_TTL_SECONDS` | 900 (15 min) | código de e-mail e de reset |
 | `GOOGLE_CLIENT_ID` | vazio (desligado) | client ID web |
 | `APPLE_CLIENT_ID` | vazio (desligado) | bundle ID iOS, lista por vírgula |
-| `EMAIL_BACKEND` | console | SMTP: `django.core.mail.backends.smtp.EmailBackend` |
-| `EMAIL_HOST`, `_PORT`, `_HOST_USER`, `_HOST_PASSWORD`, `_USE_TLS` | `localhost`, 587, vazio, vazio, `True` | SMTP |
+| `EMAIL_BACKEND` | console | `.env.example`: SMTP (`django.core.mail.backends.smtp.EmailBackend`) pro Mailpit |
+| `EMAIL_HOST`, `_PORT`, `_HOST_USER`, `_HOST_PASSWORD`, `_USE_TLS` | `localhost`, 587, vazio, vazio, `True` | `.env.example`: `mailpit`, 1025, `False`. API fora do Docker: `localhost` |
 | `DEFAULT_FROM_EMAIL` | `Tagarela <nao-responda@localhost>` | |
 
 Fixo em settings (sem env): content types e formatos aceitos, `LANGUAGE_CODE` pt-br, `TIME_ZONE` America/Sao_Paulo.
@@ -192,7 +193,7 @@ Subir: `README.md`. Comandos via `docker compose exec`:
 - Testes: `api python manage.py test`. Cobertura: `api sh -c "pip install -r requirements-dev.txt && coverage run manage.py test && coverage report"`.
 - Migration: `api python manage.py makemigrations`. `migrate` roda sozinho na subida do `api`.
 - Admin: `api python manage.py createsuperuser` (pede e-mail) → http://localhost:8000/admin/.
-- Código de verificação/reset no dev: `docker compose logs api` (e-mail no console).
+- Código de verificação/reset no dev: Mailpit em http://localhost:8025 (e-mail renderizado, texto, cabeçalhos e checagem de compatibilidade do HTML).
 - Postgres: `db psql -U <POSTGRES_USER> -d <POSTGRES_DB>` → `SELECT id, word, normalized_word, language, source, data, created_at FROM lexical_lexicalentry ORDER BY id DESC;`
 - Redis: `redis redis-cli KEYS 'lexical:*'`, `redis redis-cli GET 'lexical:en:<palavra>'`.
 - Postman: POST, Body → form-data, key `file` tipo File. Content-Type automático.
@@ -224,7 +225,7 @@ Servidor = `runserver` (dev, hot reload pelo volume `.:/app`). Subida do `api`: 
 - Unit: normalização, validator, parse do provider, lookup (ordem cache → banco → dicionário, `source`).
 - API: status + corpo (200, 400).
 - Código novo ou alterado: teste junto. Bug corrigido: teste que reproduz o bug.
-- Cobertos: normalização, lookup (ordem, `source`, idioma, gravação), cache, provider do dicionário, provider do Paddle (sem engine real), validator, service de imagem, `POST /api/v1/images/analyze`, `GET /health`, auth (cadastro + código, login, e-mail não verificado, reset, refresh, logout, Google, Apple, token inválido, anti-enumeração), `User` (manager, display, admin). Fora: criação do engine Paddle (carrega modelo real).
+- Cobertos: normalização, lookup (ordem, `source`, idioma, gravação), cache, provider do dicionário, provider do Paddle (sem engine real), validator, service de imagem, `POST /api/v1/images/analyze`, `GET /health`, auth (cadastro + código, login, e-mail não verificado, reset, refresh, logout, Google, Apple, token inválido, anti-enumeração, e-mails em texto e HTML com o código e a validade), `User` (manager, display, admin). Fora: criação do engine Paddle (carrega modelo real).
 
 ## Dependências
 

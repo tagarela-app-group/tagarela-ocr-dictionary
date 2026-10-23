@@ -1,0 +1,12 @@
+{% extends "account/email/base_message.html" %}
+
+{% block title %}Confirme seu e-mail{% endblock title %}
+{% block preheader %}Seu código: {{ code }}{% endblock preheader %}
+{% block heading %}Confirme seu e-mail{% endblock heading %}
+
+{% block content %}
+<p style="margin: 0; font-size: 16px; line-height: 24px; color: #615E78">Falta pouco pra começar. Digite este código no app:</p>
+{% include "account/email/code_block.html" %}
+{% endblock content %}
+
+{% block footnote %}Se você não criou conta no Tagarela, ignore este e-mail.{% endblock footnote %}

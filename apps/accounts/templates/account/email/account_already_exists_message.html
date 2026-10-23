@@ -1,0 +1,16 @@
+{% extends "account/email/base_message.html" %}
+
+{% block title %}Você já tem conta no Tagarela{% endblock title %}
+{% block preheader %}Alguém tentou criar uma conta com o seu e-mail.{% endblock preheader %}
+{% block heading %}Você já tem conta{% endblock heading %}
+
+{% block content %}
+<p style="margin: 0 0 16px; font-size: 16px; line-height: 24px; color: #615E78">Alguém tentou criar uma conta no Tagarela com o e-mail <strong style="color: #17152B">{{ email }}</strong>, mas ele já tem conta.</p>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+<tr>
+<td style="background: #F5F4FA; border-radius: 16px; padding: 16px 18px; font-size: 15px; line-height: 23px; color: #17152B">Se foi você, entre no app com sua senha. Esqueceu? Toque em <strong>Esqueci minha senha</strong> na tela de entrada.</td>
+</tr>
+</table>
+{% endblock content %}
+
+{% block footnote %}Se não foi você, ignore este e-mail.{% endblock footnote %}
