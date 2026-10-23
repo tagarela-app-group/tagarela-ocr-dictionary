@@ -30,3 +30,4 @@ App cliente (Flutter): repo `tagarela-app-group/tagarela`.
 13. Task finalizada: branch própria + commit + push + PR pra `develop`, na hora, sem perguntar. Fluxo em `docs/ARCHITECTURE.md` (Git). Commit e PR sem `Co-Authored-By` nem outra assinatura de IA.
 14. Merge: PR pra `develop` com esteira verde = eu faço. PR `develop` → `main` (prod) = só o usuário aprova. Nunca commitar direto na `develop` nem na `main`.
 15. Sem comentário no código. Vale pra config também (workflow, compose, Dockerfile, toml, requirements). Nome claro explica o quê. Porquê vai no doc do assunto ou no PR.
+16. Antes de alterar qualquer coisa (código, doc, config, mockup): apresentar proposta ao usuário (o que muda, onde, opções com prós e contras, recomendação) e esperar aprovação. Só implementar o aprovado.
