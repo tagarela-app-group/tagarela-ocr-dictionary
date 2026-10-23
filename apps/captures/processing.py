@@ -3,6 +3,7 @@ from django.utils import timezone
 from apps.captures.models import Capture
 from apps.captures.uploads import delete_upload, find_upload
 from apps.ocr.services import TextExtractionService
+from apps.transcription.services import TranscriptionService
 
 
 class CaptureProcessingError(Exception):
@@ -13,6 +14,7 @@ class CaptureProcessingService:
     def __init__(self, extractors: dict | None = None) -> None:
         self.extractors = extractors or {
             Capture.Source.PHOTO: TextExtractionService().extract,
+            Capture.Source.AUDIO: TranscriptionService().transcribe,
         }
 
     def process(self, capture_id, final_attempt: bool) -> None:

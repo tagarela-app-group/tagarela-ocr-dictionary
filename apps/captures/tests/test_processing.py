@@ -86,5 +86,8 @@ class CaptureProcessingServiceTests(UploadDirMixin, TestCase):
         self.assertEqual(capture.status, Capture.Status.READY)
         self.assertEqual(extractor.paths, [])
 
-    def test_photo_uses_ocr_by_default(self):
-        self.assertIn(Capture.Source.PHOTO, CaptureProcessingService().extractors)
+    def test_photo_and_audio_have_default_extractors(self):
+        self.assertEqual(
+            set(CaptureProcessingService().extractors),
+            {Capture.Source.PHOTO, Capture.Source.AUDIO},
+        )

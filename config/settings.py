@@ -29,6 +29,7 @@ INSTALLED_APPS = [
     "apps.ocr",
     "apps.lexical",
     "apps.captures",
+    "apps.transcription",
 ]
 
 MIDDLEWARE = [
@@ -156,6 +157,21 @@ OCR_ALLOWED_FORMATS = {
     "JPEG",
     "PNG",
     "WEBP",
+}
+
+TRANSCRIPTION_MODEL = os.environ.get("TRANSCRIPTION_MODEL", "base.en")
+TRANSCRIPTION_MODEL_DIR = Path(os.environ.get("TRANSCRIPTION_MODEL_DIR", "/tmp/tagarela/whisper"))
+TRANSCRIPTION_COMPUTE_TYPE = os.environ.get("TRANSCRIPTION_COMPUTE_TYPE", "int8")
+TRANSCRIPTION_CPU_THREADS = int(os.environ.get("TRANSCRIPTION_CPU_THREADS", "2"))
+TRANSCRIPTION_BEAM_SIZE = int(os.environ.get("TRANSCRIPTION_BEAM_SIZE", "5"))
+TRANSCRIPTION_MAX_AUDIO_SIZE_BYTES = int(
+    os.environ.get("TRANSCRIPTION_MAX_AUDIO_SIZE_BYTES", str(5 * 1024 * 1024))
+)
+TRANSCRIPTION_MAX_AUDIO_SECONDS = int(os.environ.get("TRANSCRIPTION_MAX_AUDIO_SECONDS", "60"))
+TRANSCRIPTION_ALLOWED_CONTENT_TYPES = {
+    "audio/mp4",
+    "audio/m4a",
+    "audio/x-m4a",
 }
 
 LEXICAL_LANGUAGE = os.environ.get("LEXICAL_LANGUAGE", "en")

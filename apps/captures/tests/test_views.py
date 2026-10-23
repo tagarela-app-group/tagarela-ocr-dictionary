@@ -9,6 +9,7 @@ from apps.captures.models import Capture, CaptureTerm
 from apps.captures.tests.helpers import TEXT, UploadDirMixin, make_capture, make_user
 from apps.captures.views import CapturePagination
 from apps.ocr.tests.images import uploaded_image
+from apps.transcription.tests.audio import uploaded_audio
 
 URL = "/api/v1/captures"
 CAPTURED_AT = "2026-10-23T10:00:00-03:00"
@@ -289,6 +290,19 @@ class FileCaptureTests(CaptureApiTestCase):
         self.assertEqual([path.name for path in self.upload_dir.iterdir()], [f"{capture.id}.png"])
         enqueue.assert_called_once_with(capture.id)
 
+    def test_audio_file_is_saved_and_queued(self, enqueue):
+        capture = make_capture(
+            self.user, source=Capture.Source.AUDIO, status=Capture.Status.WAITING_FILE, text=""
+        )
+
+        with self.captureOnCommitCallbacks(execute=True):
+            response = self.put_file(capture, uploaded_audio())
+
+        self.assertEqual(response.status_code, 202)
+        self.assertEqual(response.json()["status"], "processing")
+        self.assertEqual([path.name for path in self.upload_dir.iterdir()], [f"{capture.id}.m4a"])
+        enqueue.assert_called_once_with(capture.id)
+
     def test_failed_photo_can_be_sent_again(self, enqueue):
         capture = make_capture(
             self.user,
@@ -318,7 +332,12 @@ class FileCaptureTests(CaptureApiTestCase):
             (
                 Capture.Source.AUDIO,
                 uploaded_image(),
-                "Áudio ainda não é processado. Envie mais tarde.",
+                "Formato inválido. Envie um áudio M4A (AAC).",
+            ),
+            (
+                Capture.Source.PHOTO,
+                uploaded_audio(),
+                "Formato inválido. Envie uma imagem JPEG, PNG ou WEBP.",
             ),
             (
                 Capture.Source.PHOTO,

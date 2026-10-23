@@ -6,6 +6,7 @@
 - PostgreSQL 16 (psycopg 3). Redis 7 (cache do lexical + fila do Celery).
 - Fila: Celery 5.6, broker Redis. Processo `worker` separado (mesma imagem).
 - OCR: PaddleOCR 3 + PaddlePaddle 3.2.0 CPU (índice extra `paddlepaddle.org.cn` no `requirements.txt`). Pillow valida imagem.
+- Transcrição: faster-whisper 1.2 (CTranslate2 na CPU, `int8`, modelo só inglês `.en`). PyAV lê formato, codec e duração do áudio.
 - HTTP externo: httpx.
 - Auth: django-allauth 65 headless (cliente `app`), token JWT HS256. Login social: Google e Apple.
 - Local: Docker Compose (`api`, `worker`, `db`, `redis`, `mailpit`). Imagem `python:3.12-slim` + libs de sistema `libglib2.0-0 libgl1 libgomp1` (Paddle/OpenCV) e `libpq5` (Postgres).
@@ -16,7 +17,7 @@ Um backend Django, responsabilidade separada por app. Sem microserviço: projeto
 
 Auth: allauth dentro do monólito (app `accounts`). Better Auth descartado: lib TypeScript, exigiria serviço Node separado (2º runtime e deploy). Port Python dele ainda imaturo (1ª versão em 09/2026, 1 mantenedor).
 
-Fila: Celery + Redis. Extrair texto (OCR da foto; transcrição do áudio em seguida) pesa CPU e leva segundos: roda no `worker`, fora da requisição. Worker prefork mantém os modelos carregados entre tarefas. RQ descartado: processo novo por tarefa recarregaria os modelos. Síncrono descartado: requisição longa em rede móvel e servidor preso.
+Fila: Celery + Redis. Extrair texto (OCR da foto, transcrição do áudio) pesa CPU e leva segundos: roda no `worker`, fora da requisição. Worker prefork mantém os modelos carregados entre tarefas. RQ descartado: processo novo por tarefa recarregaria os modelos. Síncrono descartado: requisição longa em rede móvel e servidor preso.
 
 Princípios: local antes de externo (cache → banco → API). Redis descartável, Postgres é a verdade. Estrutura simples, sem camada extra sem necessidade.
 
@@ -58,6 +59,13 @@ apps/
     views.py, urls.py      rotas /api/v1/captures
     admin.py               Capture (termos inline) no admin
     tests/                 testes do app (helpers.py: usuário, captura, pasta de upload temporária)
+  transcription/           áudio → validação → texto (pra captura)
+    providers/whisper.py   único lugar que conhece faster-whisper
+    audio.py               único lugar que conhece PyAV: formato, codec e duração
+    validators.py          validação do upload de áudio
+    services.py            TranscriptionService
+    management/commands/benchmark_transcription.py  mede tempo, CPU e memória por modelo
+    tests/                 testes do app (audio.py: gera M4A/WAV de verdade com PyAV, sem arquivo no repo)
 docs/                      PRODUCT, ARCHITECTURE
 .github/workflows/ci.yml   esteira
 pyproject.toml             config do ruff e coverage (sem dependência)
@@ -65,7 +73,7 @@ requirements.txt           dependências da app (imagem)
 requirements-dev.txt       ruff, coverage, pip-audit (fora da imagem)
 ```
 
-- Dependência entre apps: `captures` → `ocr` → `lexical`. Nunca o contrário. `common` não depende de ninguém. `accounts` não depende de ninguém. App que precisar de usuário: `get_user_model()` / `settings.AUTH_USER_MODEL`, nunca import direto de `accounts.models`.
+- Dependência entre apps: `captures` → `ocr` → `lexical`; `captures` → `transcription`. Nunca o contrário. `common` não depende de ninguém. `accounts` não depende de ninguém. App que precisar de usuário: `get_user_model()` / `settings.AUTH_USER_MODEL`, nunca import direto de `accounts.models`.
 - `lexical` e `accounts` sem rota própria (sem `urls.py`). Rotas do allauth: `include` em `config/urls.py`.
 - Stubs vazios do Django: `ocr/models.py`, `ocr/admin.py`, `lexical/views.py`, `lexical/serializers.py`.
 
@@ -81,13 +89,13 @@ requirements-dev.txt       ruff, coverage, pip-audit (fora da imagem)
 - Tabela: `models.py` + migration + registro em `admin.py`.
 - Setting: env → `config/settings.py` → `.env.example` + tabela Config abaixo.
 - Transversal (health, settings, urls raiz): `config/`.
-- Módulo novo (ex.: transcrição): app novo `apps/<nome>/` em `INSTALLED_APPS`, mesma estrutura dos atuais.
+- Módulo novo (ex.: `transcription`): app novo `apps/<nome>/` em `INSTALLED_APPS`, mesma estrutura dos atuais.
 
 ## Fluxo
 
 `analyze_image` (view) → `ImageAnalyzeSerializer` (valida) → `ImageAnalysisService.analyze` → `PaddleOCRProvider.extract_text` → `LexicalLookupService.analyze_text` → resposta.
 
-Captura de foto: app cria (`POST captures`, `waiting_file`) → manda o arquivo (`PUT captures/{id}/file`, 202) → `save_upload` grava em `CAPTURE_UPLOAD_DIR` → `processing` → `enqueue_processing` (após commit) → worker `process_capture` → `CaptureProcessingService.process` → `TextExtractionService.extract` → `ready` com o texto, arquivo apagado. Texto digitado já nasce `ready`. Depois: app salva texto editado e termos (`PATCH`) → confirma (`POST confirm`, `analyzed`).
+Captura de foto ou áudio: app cria (`POST captures`, `waiting_file`) → manda o arquivo (`PUT captures/{id}/file`, 202) → `save_upload` grava em `CAPTURE_UPLOAD_DIR` → `processing` → `enqueue_processing` (após commit) → worker `process_capture` → `CaptureProcessingService.process` → `TextExtractionService.extract` (foto) ou `TranscriptionService.transcribe` (áudio) → `ready` com o texto, arquivo apagado. Texto digitado já nasce `ready`. Depois: app salva texto editado e termos (`PATCH`) → confirma (`POST confirm`, `analyzed`).
 
 Lookup, em lote:
 
@@ -102,6 +110,27 @@ Lookup, em lote:
 - Paddle lê de caminho: grava arquivo temporário, apaga no fim. Desligado: orientação de documento, unwarping, orientação de linha.
 - Texto = `rec_texts` unidos por espaço.
 
+## Transcrição (`transcription`)
+
+- Validação em ordem: tamanho ≤ `TRANSCRIPTION_MAX_AUDIO_SIZE_BYTES` → `content_type` `audio/mp4`, `audio/m4a` ou `audio/x-m4a` → PyAV abre → container MP4/M4A com uma faixa só, AAC (sem vídeo) → duração ≤ `TRANSCRIPTION_MAX_AUDIO_SECONDS` + 1 s de folga (app para em 60 s; o encoder passa uns milissegundos). Erro = 400, mensagem pt-BR.
+- Modelo: um por processo e por configuração (modelo, precisão, threads), criado na 1ª tarefa (lazy, com lock), reutilizado. 1ª vez baixa do Hugging Face pra `TRANSCRIPTION_MODEL_DIR` (volume `whisper_models`: recriar o container não baixa de novo).
+- Transcrição: idioma fixo `en`, `beam_size` = `TRANSCRIPTION_BEAM_SIZE`, `vad_filter` ligado (corta silêncio, evita texto inventado em áudio mudo). Texto = segmentos unidos por espaço.
+- PyAV `<19`: faster-whisper 1.2.1 passa `metadata_errors` pro `av.open`, removido no PyAV 19. Subir o teto quando sair faster-whisper que não passe.
+
+Medição (`benchmark_transcription`, 2026-10-23): Docker Desktop no PC de dev (6 vCPU), `int8`, beam 5, threads padrão do CTranslate2 (4), 1 tarefa por vez. Áudio: LibriSpeech dev-clean (CC BY 4.0, leitura limpa, fora do repo), convertido pra M4A AAC 44,1 kHz 128 kbps (padrão do `record` no app). Erro = WER contra o texto oficial, 248 palavras.
+
+| Modelo | 60 s de áudio: tempo / CPU | 30 s | 5 s | Memória pico | Erro (WER) |
+| --- | --- | --- | --- | --- | --- |
+| `tiny.en` | 5,5 s / 10,6 s | 3,1 s | 0,9 s | 348 MB | 6,9% |
+| `base.en` | 7,8 s / 16,3 s | 5,1 s | 1,3 s | 447 MB | 5,6% |
+| `small.en` | 19,9 s / 45,4 s | 12,5 s | 3,8 s | 781 MB | 2,8% |
+
+- Threads: 2 ganha de 4 nesta máquina, repetido 3×. 60 s em `base.en`: 5,2 s / 9,4 s de CPU (2 threads) × 7,6 s / 15,7 s (4). `small.en` com 2: 15,1 s / 27,9 s. Padrão = 2.
+- Escolha: `base.en` com 2 threads. 60 s viram texto em ~5 s. Erro de `base` é quase todo nome próprio e homófono ("needing" × "kneading"); a pessoa corrige no texto antes de escolher os termos. `small.en` erra metade, mas custa ~3× CPU e +330 MB por processo. `tiny.en` economiza pouco e erra mais.
+- Leitura limpa favorece todos. Microfone de celular com ruído deve aumentar o erro e a distância entre os modelos: medir de novo com áudio real do app antes de produção, e no servidor de produção (CPU diferente).
+- Ponta a ponta (`PUT file` → fila → worker → `ready`), 60 s, `base.en`, 2 threads: 1ª tarefa depois de subir o worker ~22 s (carrega modelo), 2ª ~13 s, depois ~5,5 s. Ideal: carregar no startup do worker.
+- Memória pico é só do Whisper. Worker carrega Paddle também: somar os dois pra dimensionar.
+
 ## Lexical (`lexical`)
 
 - Normalização: regex `\b[\w'-]+\b` → NFKC → `casefold` → tira `-` e `'` das bordas → dedup → ordem alfabética. Ex.: "The quick brown fox" → brown, fox, quick, the. Número também vira palavra (`\w` pega dígito).
@@ -115,7 +144,6 @@ Lookup, em lote:
 - Status: `waiting_file` (foto/áudio sem arquivo) → `processing` → `ready` | `failed` → `analyzed` (confirmou a análise). Texto digitado nasce `ready`.
 - Arquivo: só temporário. Foto e áudio ficam no celular; a API guarda só o texto. Apagado depois de extrair, depois da última tentativa e ao descartar. Reenviar (`PUT file`) vale em `waiting_file`, `processing` e `failed` (é o "Processar agora" do app). Já processada: 409.
 - Processamento: task `process_capture`. Erro na extração: nova tentativa com espera `CAPTURE_PROCESS_RETRY_SECONDS × 2^tentativa`, até `CAPTURE_PROCESS_MAX_RETRIES`. Última falhou: `failed` + `error`. Códigos: `no_text` (extraiu nada), `file_missing` (arquivo sumiu da pasta), `processing_failed` (extração quebrou em todas as tentativas).
-- Áudio: aceito na criação, mas `PUT file` responde 400 até o app de transcrição entrar.
 - Texto e termos: `text` = atual (editável), `original_text` = o que veio do OCR/transcrição/digitação. Termo = trecho do texto (`text`, `start`, `end` em caracteres). Palavra e expressão que a contém coexistem ("mind" e "mind the gap"). `PATCH` com `terms` troca a lista toda; só `text` mantém os termos que ainda batem no mesmo lugar. Edita só em `ready`.
 - Confirmar: exige 1+ termo e `ready` → `analyzed` (`analyzed_at`). De novo em `analyzed`: 200. A IA que monta a ficha de cada termo entra depois.
 - Descartar: só marca `discarded_at`. Registro fica no banco; some da lista e do detalhe. Sincronização (`updated_since`) traz o descarte, pro outro aparelho apagar.
@@ -202,7 +230,7 @@ Captura (`/api/v1/captures`). Erro de validação: 400 `{"campo": ["<mensagem pt
 | `GET /api/v1/captures` | query `updated_since?` (ISO 8601), `cursor?` | 200 `{next, previous, results}`. Mais recente (`updated_at`) primeiro, `CAPTURE_PAGE_SIZE` por página. Sem `updated_since`: sem as descartadas. Com: tudo que mudou desde então, descartadas incluídas |
 | `GET /api/v1/captures/{id}` | | 200 |
 | `PATCH /api/v1/captures/{id}` | JSON `{text?, terms?: [{text, start, end}]}`, ao menos um. Até `CAPTURE_MAX_TERMS` termos de até `CAPTURE_MAX_TERM_LENGTH` | 200. 400 termo que não bate com o texto ou repetido. 409 fora de `ready` |
-| `PUT /api/v1/captures/{id}/file` | multipart, campo `file`. Foto: mesmas regras do OCR | 202 `processing`. 400 captura de texto, áudio (ainda) ou arquivo inválido. 409 já processada |
+| `PUT /api/v1/captures/{id}/file` | multipart, campo `file`. Foto: mesmas regras do OCR. Áudio: regras da Transcrição | 202 `processing`. 400 captura de texto ou arquivo inválido. 409 já processada |
 | `POST /api/v1/captures/{id}/confirm` | | 200 `analyzed`. 400 sem termo. 409 fora de `ready` |
 | `DELETE /api/v1/captures/{id}` | | 204, mesmo se já descartada |
 
@@ -242,6 +270,13 @@ Captura na resposta:
 | `CAPTURE_PROCESS_MAX_RETRIES` | 3 | novas tentativas antes de `failed` |
 | `CAPTURE_PROCESS_RETRY_SECONDS` | 30 | espera base, dobra a cada tentativa |
 | `OCR_MAX_IMAGE_SIZE_BYTES` | 10 MB | |
+| `TRANSCRIPTION_MODEL` | `base.en` | modelo do Whisper (`tiny.en`, `base.en`, `small.en`...). Escolha em Transcrição |
+| `TRANSCRIPTION_MODEL_DIR` | `/tmp/tagarela/whisper` | onde o modelo é baixado. Compose fixa `/var/lib/tagarela/whisper` no volume `whisper_models` (worker) |
+| `TRANSCRIPTION_COMPUTE_TYPE` | `int8` | precisão na CPU |
+| `TRANSCRIPTION_CPU_THREADS` | 2 | 0 = padrão do CTranslate2 (4). Medição em Transcrição |
+| `TRANSCRIPTION_BEAM_SIZE` | 5 | 1 = mais rápido, pode errar mais |
+| `TRANSCRIPTION_MAX_AUDIO_SIZE_BYTES` | 5 MB | 60 s em AAC 128 kbps ≈ 1 MB |
+| `TRANSCRIPTION_MAX_AUDIO_SECONDS` | 60 | + 1 s de folga |
 | `LEXICAL_LANGUAGE` | `en` | idioma do dicionário + chave Redis |
 | `LEXICAL_CACHE_TTL_SECONDS` | 86400 (24 h) | |
 | `DICTIONARY_API_BASE_URL` | `https://api.dictionaryapi.dev/api/v2/entries` | |
@@ -267,6 +302,7 @@ Subir: `README.md`. Comandos via `docker compose exec`:
 - Código de verificação/reset no dev: Mailpit em http://localhost:8025 (e-mail renderizado, texto, cabeçalhos e checagem de compatibilidade do HTML).
 - Postgres: `db psql -U <POSTGRES_USER> -d <POSTGRES_DB>` → `SELECT id, word, normalized_word, language, source, data, created_at FROM lexical_lexicalentry ORDER BY id DESC;`
 - Redis: `redis redis-cli KEYS 'lexical:*'`, `redis redis-cli GET 'lexical:en:<palavra>'`. Fila: `redis redis-cli -n 1 LLEN celery`.
+- Medir transcrição: `worker python manage.py benchmark_transcription <arquivos .m4a> --model base.en` (opcionais `--threads`, `--beam-size`, `--compute-type`). Um modelo por execução: memória pico é do processo.
 - Worker: `docker compose logs -f worker`. Mudou código de task ou service: `docker compose restart worker` (worker não tem hot reload).
 - Capturas: `db psql ...` → `SELECT id, source, status, error, text, updated_at FROM captures_capture ORDER BY updated_at DESC;`
 - Postman: POST, Body → form-data, key `file` tipo File. Content-Type automático.
@@ -294,12 +330,12 @@ Servidor = `runserver` (dev, hot reload pelo volume `.:/app`). Subida do `api`: 
 - Roda no container `api` (precisa do Postgres).
 - Arquivo: pacote `apps/<app>/tests/` (`__init__.py` + `test_<módulo>.py`). Transversal (`config/`): `config/tests.py`. Helper compartilhado no pacote do app (ex.: `apps/ocr/tests/images.py`).
 - Auth: fluxo inteiro pelo client do Django em `/api/auth/app/v1`. Código lido de `mail.outbox`. `cache.clear()` no `setUp` (rate limit do allauth fica no cache). Google/Apple: `patch` da validação do id_token (`allauth.socialaccount.providers.google.views._verify_and_decode`, `AppleOAuth2Adapter.get_verified_identity_data`).
-- Nunca Paddle, rede ou Redis reais: fake via construtor. View: `unittest.mock.patch("apps.ocr.views.ImageAnalysisService")`. Dicionário: `httpx.get` mockado + payload fixo. Paddle: `patch.object(PaddleOCRProvider, "_engine", fake)`. Redis: client `MagicMock`. Health: `patch` de `config.health.connections` e `config.health.Redis`.
+- Nunca Paddle, Whisper, rede ou Redis reais: fake via construtor. View: `unittest.mock.patch("apps.ocr.views.ImageAnalysisService")`. Dicionário: `httpx.get` mockado + payload fixo. Paddle: `patch.object(PaddleOCRProvider, "_engine", fake)`. Whisper: `patch.object(WhisperProvider, "_models", {chave: fake})`; carga via `patch("faster_whisper.WhisperModel")`. Redis: client `MagicMock`. Health: `patch` de `config.health.connections` e `config.health.Redis`.
 - Unit: normalização, validator, parse do provider, lookup (ordem cache → banco → dicionário, `source`).
 - Captura: `UploadDirMixin` (pasta de upload temporária por teste), `make_user`, `make_capture` em `apps/captures/tests/helpers.py`. Fila: `patch("apps.captures.services.enqueue_processing")` + `captureOnCommitCallbacks(execute=True)`. Extração: `CaptureProcessingService({source: fake})`. Task: `process_capture.apply(args=..., retries=N)` com o service mockado; nova tentativa via `patch.object(process_capture, "retry")`. Nunca broker real.
 - API: status + corpo (200, 400, 401). Endpoint com login: `self.client.force_authenticate(get_user_model()(email=...))` no `setUp`; Bearer de verdade só no teste de auth.
 - Código novo ou alterado: teste junto. Bug corrigido: teste que reproduz o bug.
-- Cobertos: normalização, lookup (ordem, `source`, idioma, gravação), cache, provider do dicionário, provider do Paddle (sem engine real), validator, service de imagem, `POST /api/v1/images/analyze`, `GET /health`, auth (cadastro + código, login, e-mail não verificado, reset, refresh, logout, Google, Apple, token inválido, anti-enumeração, Bearer nas rotas `/api/v1` (401 sem token ou token inválido, 200/400 com o access do login), e-mails em texto e HTML com o código e a validade), `User` (manager, display, admin), `StrictSerializer`, captura (criar, id repetido e de outro usuário, campos e valores inválidos, lista com cursor e `updated_since`, detalhe, termos com palavra dentro de expressão, editar texto mantendo termos, termo que não bate, confirmar, descartar, arquivo de foto na fila, reenvio, 409, processamento com texto, sem texto, erro com e sem nova tentativa, arquivo sumido, task e fila), `TextExtractionService`. Fora: criação do engine Paddle (carrega modelo real).
+- Cobertos: normalização, lookup (ordem, `source`, idioma, gravação), cache, provider do dicionário, provider do Paddle (sem engine real), validator, service de imagem, `POST /api/v1/images/analyze`, `GET /health`, auth (cadastro + código, login, e-mail não verificado, reset, refresh, logout, Google, Apple, token inválido, anti-enumeração, Bearer nas rotas `/api/v1` (401 sem token ou token inválido, 200/400 com o access do login), e-mails em texto e HTML com o código e a validade), `User` (manager, display, admin), `StrictSerializer`, captura (criar, id repetido e de outro usuário, campos e valores inválidos, lista com cursor e `updated_since`, detalhe, termos com palavra dentro de expressão, editar texto mantendo termos, termo que não bate, confirmar, descartar, arquivo de foto e de áudio na fila, arquivo trocado (foto em áudio e vice-versa), reenvio, 409, processamento com texto, sem texto, erro com e sem nova tentativa, arquivo sumido, task e fila), `TextExtractionService`, validator de áudio (tipo, formato, codec, tamanho, duração com folga), provider do Whisper (sem modelo real), `TranscriptionService`, comando de benchmark. Fora: criação do engine Paddle e do modelo Whisper (carregam modelo real).
 
 ## Dependências
 

@@ -4,6 +4,7 @@ from rest_framework import serializers
 from apps.captures.models import Capture, CaptureTerm
 from apps.common.serializers import StrictSerializer
 from apps.ocr.validators import validate_uploaded_image
+from apps.transcription.validators import validate_uploaded_audio
 
 
 class CaptureListParamsSerializer(StrictSerializer):
@@ -37,9 +38,9 @@ class CaptureFileSerializer(StrictSerializer):
         if source == Capture.Source.TEXT:
             raise serializers.ValidationError("Captura de texto não recebe arquivo.")
         if source == Capture.Source.AUDIO:
-            raise serializers.ValidationError("Áudio ainda não é processado. Envie mais tarde.")
-
-        validate_uploaded_image(file)
+            validate_uploaded_audio(file)
+        else:
+            validate_uploaded_image(file)
 
         return file
 

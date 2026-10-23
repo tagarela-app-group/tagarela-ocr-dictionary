@@ -26,9 +26,11 @@ services:
       - .env
     environment:
       CAPTURE_UPLOAD_DIR: /var/lib/tagarela/captures
+      TRANSCRIPTION_MODEL_DIR: /var/lib/tagarela/whisper
     volumes:
       - .:/app
       - capture_uploads:/var/lib/tagarela/captures
+      - whisper_models:/var/lib/tagarela/whisper
     depends_on:
       db:
         condition: service_healthy
@@ -73,3 +75,4 @@ services:
 volumes:
   postgres_data:
   capture_uploads:
+  whisper_models:
