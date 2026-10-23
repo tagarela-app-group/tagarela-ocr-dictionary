@@ -11,11 +11,14 @@ class PaddleOCRProvider:
         image_path = self._write_temp_image(image_file)
 
         try:
-            result = self._get_engine().predict(str(image_path))
-            return self._join_texts(result)
+            return self.extract_text_from_path(image_path)
         finally:
             image_path.unlink(missing_ok=True)
             image_file.seek(0)
+
+    def extract_text_from_path(self, image_path: Path) -> str:
+        result = self._get_engine().predict(str(image_path))
+        return self._join_texts(result)
 
     @classmethod
     def _get_engine(cls):

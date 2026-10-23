@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from apps.lexical.services import LexicalLookupService
 from apps.ocr.providers.paddle import PaddleOCRProvider
 
@@ -21,3 +23,11 @@ class ImageAnalysisService:
             },
             "words": words,
         }
+
+
+class TextExtractionService:
+    def __init__(self, ocr_provider: PaddleOCRProvider | None = None) -> None:
+        self.ocr_provider = ocr_provider or PaddleOCRProvider()
+
+    def extract(self, image_path: Path) -> str:
+        return self.ocr_provider.extract_text_from_path(image_path)
