@@ -17,7 +17,7 @@ Princípios: local antes de externo (cache → banco → API). Redis descartáve
 ## Pastas
 
 ```
-config/                    settings, urls raiz, health.py (GET /health), wsgi/asgi
+config/                    settings, urls raiz, health.py (GET /health), tests.py (health), wsgi/asgi
 apps/
   ocr/                     imagem → validação → texto. Orquestra a análise
     providers/paddle.py    único lugar que conhece PaddleOCR
@@ -25,12 +25,14 @@ apps/
     serializers.py         ImageAnalyzeSerializer
     services.py            ImageAnalysisService (OCR + lexical)
     views.py, urls.py      analyze_image
+    tests/                 testes do app (images.py: helper de upload)
   lexical/                 texto → palavras → definição
     providers/dictionary.py  único lugar que conhece a API de dicionário
     cache.py               LexicalCache (Redis)
     models.py              LexicalEntry
     services.py            LexicalPreparationService, LexicalLookupService
     admin.py               LexicalEntry no admin
+    tests/                 testes do app
 docs/                      PRODUCT, ARCHITECTURE
 .github/workflows/ci.yml   esteira
 pyproject.toml             config do ruff e coverage (sem dependência)
@@ -40,7 +42,7 @@ requirements-dev.txt       ruff, coverage, pip-audit (fora da imagem)
 
 - Dependência entre apps: `ocr` → `lexical`. Nunca o contrário.
 - `lexical` sem rota própria (sem `urls.py`).
-- Stubs vazios do Django: `ocr/models.py`, `ocr/admin.py`, `lexical/views.py`, `lexical/serializers.py`, `*/tests.py`.
+- Stubs vazios do Django: `ocr/models.py`, `ocr/admin.py`, `lexical/views.py`, `lexical/serializers.py`.
 
 ## Onde colocar
 
@@ -169,14 +171,14 @@ Servidor = `runserver` (dev, hot reload pelo volume `.:/app`). Sem setup de prod
 
 ## Testes
 
-- Runner do Django (`manage.py test`). Sem pytest por enquanto. Base: `django.test.TestCase` (banco), `SimpleTestCase` (sem banco), `rest_framework.test.APITestCase` (endpoint).
+- Runner do Django (`manage.py test`). Sem pytest por enquanto. Base: `django.test.TestCase` (banco), `SimpleTestCase` (sem banco), `rest_framework.test.APISimpleTestCase` (endpoint sem banco), `APITestCase` (endpoint com banco).
 - Roda no container `api` (precisa do Postgres).
-- Arquivo: `apps/<app>/tests.py`. Cresceu: pacote `apps/<app>/tests/` (`__init__.py` + `test_<módulo>.py`).
-- Nunca Paddle, rede ou Redis reais: fake via construtor. View: `unittest.mock.patch("apps.ocr.views.ImageAnalysisService")`. Dicionário: `httpx` mockado + payload fixo.
+- Arquivo: pacote `apps/<app>/tests/` (`__init__.py` + `test_<módulo>.py`). Transversal (`config/`): `config/tests.py`. Helper compartilhado no pacote do app (ex.: `apps/ocr/tests/images.py`).
+- Nunca Paddle, rede ou Redis reais: fake via construtor. View: `unittest.mock.patch("apps.ocr.views.ImageAnalysisService")`. Dicionário: `httpx.get` mockado + payload fixo. Paddle: `patch.object(PaddleOCRProvider, "_engine", fake)`. Redis: client `MagicMock`. Health: `patch` de `config.health.connections` e `config.health.Redis`.
 - Unit: normalização, validator, parse do provider, lookup (ordem cache → banco → dicionário, `source`).
 - API: status + corpo (200, 400).
 - Código novo ou alterado: teste junto. Bug corrigido: teste que reproduz o bug.
-- Hoje: nenhum teste.
+- Cobertos: normalização, lookup (ordem, `source`, idioma, gravação), cache, provider do dicionário, provider do Paddle (sem engine real), validator, service de imagem, `POST /api/v1/images/analyze`, `GET /health`. Fora: criação do engine Paddle (carrega modelo real).
 
 ## Dependências
 
