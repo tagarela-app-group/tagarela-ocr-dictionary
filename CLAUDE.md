@@ -9,7 +9,7 @@ Ler só o doc do assunto do pedido. Não ler todos por padrão.
 | Doc | Assunto |
 | --- | --- |
 | `docs/PRODUCT.md` | Produto: papel da API, conceitos, escopo, lacunas vs app. |
-| `docs/ARCHITECTURE.md` | Técnico: stack, pastas, fluxo, endpoints, dados, config, convenções, testes, git. |
+| `docs/ARCHITECTURE.md` | Técnico: stack, pastas, fluxo, endpoints, dados, config, convenções, testes, git e CI. |
 
 App cliente (Flutter): repo `tagarela-app-group/tagarela`.
 
@@ -28,4 +28,4 @@ App cliente (Flutter): repo `tagarela-app-group/tagarela`.
 11. Pedido quebra regra ou boa prática: avisar usuário antes de fazer. Dizer qual regra e propor alternativa.
 12. Código novo ou alterado (service, provider, validator, view): teste junto. Regras em `docs/ARCHITECTURE.md` (Testes).
 13. Task finalizada: branch própria + commit + push + PR pra `develop`, na hora, sem perguntar. Fluxo em `docs/ARCHITECTURE.md` (Git). Commit e PR sem `Co-Authored-By` nem outra assinatura de IA.
-14. Merge: PR pra `develop` com checagem verde = eu faço. PR `develop` → `main` (prod) = só o usuário aprova. Nunca commitar direto na `develop` nem na `main`.
+14. Merge: PR pra `develop` com esteira verde = eu faço. PR `develop` → `main` (prod) = só o usuário aprova. Nunca commitar direto na `develop` nem na `main`.

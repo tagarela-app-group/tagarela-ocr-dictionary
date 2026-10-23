@@ -1,0 +1,129 @@
+name: Esteira
+
+on:
+  pull_request:
+    branches: [develop, main]
+  push:
+    branches: [develop, main]
+  workflow_dispatch:
+
+# Push novo no mesmo PR cancela a rodada anterior.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  # Mesma versão do Dockerfile (python:3.12-slim).
+  PYTHON_VERSION: "3.12"
+
+jobs:
+  check:
+    name: Formato, análise, migrations e testes
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # Credenciais = padrão do config/settings.py: testes conectam sem env.
+    services:
+      db:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: tagarela
+          POSTGRES_USER: tagarela
+          POSTGRES_PASSWORD: tagarela
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -h 127.0.0.1 -U tagarela -d tagarela"
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 15
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: requirements*.txt
+
+      - name: Ferramentas (ruff, coverage)
+        run: pip install -r requirements-dev.txt
+
+      # Antes das dependências pesadas (Paddle): erro de formato falha rápido.
+      - name: Formato
+        run: ruff format --check .
+
+      - name: Análise
+        run: ruff check .
+
+      - name: Dependências
+        run: pip install -r requirements.txt
+
+      - name: Checagem do Django
+        run: python manage.py check
+
+      - name: Migration faltando
+        run: python manage.py makemigrations --check --dry-run
+
+      - name: Testes
+        run: coverage run manage.py test
+
+      - name: Cobertura no resumo
+        run: |
+          echo "### Cobertura" >> "$GITHUB_STEP_SUMMARY"
+          coverage report --format=markdown >> "$GITHUB_STEP_SUMMARY"
+          coverage xml
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: cobertura
+          path: coverage.xml
+          retention-days: 7
+
+  vulnerabilidades:
+    name: Dependências vulneráveis
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: requirements*.txt
+
+      # requirements.txt usa faixa de versão: audita o que o pip resolveu,
+      # transitivas incluídas. Congela antes de instalar o pip-audit.
+      - name: Dependências
+        run: |
+          pip install -r requirements.txt
+          pip freeze > "$RUNNER_TEMP/instalado.txt"
+          pip install -r requirements-dev.txt
+
+      - name: pip-audit
+        run: pip-audit -r "$RUNNER_TEMP/instalado.txt" --no-deps --disable-pip --progress-spinner off
+
+  docker:
+    name: Docker (build + /health)
+    needs: check
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: .env de exemplo
+        run: cp .env.example .env
+
+      # Volume vazio: passa pelo initdb do Postgres, igual à 1ª subida local.
+      - name: Build e subida
+        run: docker compose up --build --detach --wait --wait-timeout 120
+
+      - name: /health 200
+        run: curl --fail --silent --show-error --retry 10 --retry-delay 3 --retry-all-errors http://localhost:8000/health
+
+      - name: Logs
+        if: failure()
+        run: docker compose logs

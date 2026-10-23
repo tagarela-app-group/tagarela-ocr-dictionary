@@ -32,6 +32,10 @@ apps/
     services.py            LexicalPreparationService, LexicalLookupService
     admin.py               LexicalEntry no admin
 docs/                      PRODUCT, ARCHITECTURE
+.github/workflows/ci.yml   esteira
+pyproject.toml             config do ruff e coverage (sem dependência)
+requirements.txt           dependências da app (imagem)
+requirements-dev.txt       ruff, coverage, pip-audit (fora da imagem)
 ```
 
 - Dependência entre apps: `ocr` → `lexical`. Nunca o contrário.
@@ -141,12 +145,14 @@ Fixo em settings (sem env): content types e formatos aceitos, `LANGUAGE_CODE` pt
 
 Subir: `README.md`. Comandos via `docker compose exec`:
 
-- Testes: `api python manage.py test`.
+- Testes: `api python manage.py test`. Cobertura: `api sh -c "pip install -r requirements-dev.txt && coverage run manage.py test && coverage report"`.
 - Migration: `api python manage.py makemigrations` / `migrate`.
 - Admin: `api python manage.py createsuperuser` → http://localhost:8000/admin/.
 - Postgres: `db psql -U <POSTGRES_USER> -d <POSTGRES_DB>` → `SELECT id, word, normalized_word, language, source, data, created_at FROM lexical_lexicalentry ORDER BY id DESC;`
 - Redis: `redis redis-cli KEYS 'lexical:*'`, `redis redis-cli GET 'lexical:en:<palavra>'`.
 - Postman: POST, Body → form-data, key `file` tipo File. Content-Type automático.
+
+Formato e análise: fora do container (ruff não está na imagem). Venv local: `python -m venv .venv` → `pip install -r requirements-dev.txt` → `ruff format .`, `ruff check --fix .`.
 
 Servidor = `runserver` (dev, hot reload pelo volume `.:/app`). Sem setup de produção.
 
@@ -154,7 +160,8 @@ Servidor = `runserver` (dev, hot reload pelo volume `.:/app`). Sem setup de prod
 
 - Código (nomes, classes) em inglês. Texto pro usuário (erro) e docs em pt-BR.
 - Import absoluto: `apps.<app>.<módulo>`, `config.<módulo>`.
-- Aspas duplas. Type hints nas assinaturas. PEP 8. Sem lint/formatter configurado.
+- Formato e análise: ruff (`pyproject.toml`). Regras padrão do ruff (menos RUF012), linha 100, migrations fora.
+- Aspas duplas. Type hints nas assinaturas.
 - View: função com `@api_view`.
 - Nomes: `<X>Provider` (externo), `<X>Service` (regra), `<X>Serializer`, `<X>Cache`.
 - Dependência injetável: construtor recebe opcional, padrão real (`self.cache = cache or LexicalCache()`).
@@ -175,12 +182,19 @@ Servidor = `runserver` (dev, hot reload pelo volume `.:/app`). Sem setup de prod
 
 - Antes de adicionar pacote: checar PyPI (último release, manutenção), issues abertas, compatibilidade com Python 3.12 e Paddle. Contar ao usuário antes de instalar. Pacote nativo, pesado ou pouco mantido: perguntar.
 - `requirements.txt` com faixa `>=x,<y`. Exceção: `paddlepaddle` fixo.
+- `requirements-dev.txt`: ferramenta de dev e esteira, nunca na imagem. `ruff` fixo (versão nova muda formatação): subiu = `ruff format .` + `ruff check .` no mesmo PR.
 - Lib de sistema nova: `Dockerfile` junto.
 
-## Git
+## Git e CI
 
 - Repo `tagarela-app-group/tagarela-ocr-dictionary`.
 - Branches: `main` = produção. `develop` = integração. Cada mudança = branch nova a partir da `develop`: `feat/`, `fix/`, `docs/`, `ci/`, `chore/` + nome curto.
-- Fluxo: branch → commit → push → PR pra `develop`. Checagem verde → squash merge, branch apagada. Release: PR `develop` → `main` (merge commit), aprovado pelo usuário.
+- Fluxo: branch → commit → push → PR pra `develop`. Esteira verde → squash merge, branch apagada. Release: PR `develop` → `main` (merge commit), aprovado pelo usuário.
 - Commit: Conventional Commits em pt-BR (ex.: `feat: análise de áudio`).
-- Sem esteira (CI) ainda. Checagem = local, antes do push: `manage.py test` verde, `manage.py makemigrations --check --dry-run` sem migration faltando. Mexeu em Docker/compose: `docker compose up` + `/health` 200.
+- Esteira: `.github/workflows/ci.yml`. Roda em todo PR e push na `develop`/`main`.
+  - Formato, análise, migrations e testes: `ruff format --check`, `ruff check` (antes de instalar Paddle: falha rápido), `manage.py check`, `makemigrations --check --dry-run`, `coverage run manage.py test` com Postgres 16 como service. Cobertura no resumo da rodada + artefato `cobertura` (`coverage.xml`), 7 dias.
+  - Dependências vulneráveis: instala `requirements.txt`, congela (`pip freeze`) e roda `pip-audit` no resultado, transitivas incluídas. Vulnerabilidade conhecida reprova o PR.
+  - Docker: `docker compose up --build --wait` com `.env.example` e volume vazio (passa pelo initdb) + `GET /health` 200. Falhou: logs do compose na rodada.
+- Python da esteira = `PYTHON_VERSION` no workflow = imagem do `Dockerfile`. Subiu um: subir o outro junto.
+- Sem lockfile: `requirements.txt` em faixa, esteira instala a última versão dentro dela. Release nova de dependência pode quebrar a esteira sem mudança no código.
+- Antes do push, rodar local: `ruff format .`, `ruff check .`, `manage.py test`, `makemigrations --check --dry-run`. Mexeu em Docker/compose: `docker compose up` + `/health` 200.
