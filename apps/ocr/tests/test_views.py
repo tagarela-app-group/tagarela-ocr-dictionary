@@ -1,5 +1,6 @@
 from unittest.mock import patch
 
+from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
 from rest_framework.test import APISimpleTestCase
 
@@ -14,6 +15,15 @@ RESULT = {
 
 @patch("apps.ocr.views.ImageAnalysisService")
 class AnalyzeImageViewTests(APISimpleTestCase):
+    def setUp(self):
+        self.client.force_authenticate(get_user_model()(email="ana@example.com"))
+
+    def test_without_login_returns_401(self, service_class):
+        response = self.client_class().post(URL, {"file": uploaded_image()}, format="multipart")
+
+        self.assertEqual(response.status_code, 401)
+        service_class.assert_not_called()
+
     def test_valid_image_returns_analysis(self, service_class):
         service_class.return_value.analyze.return_value = RESULT
 

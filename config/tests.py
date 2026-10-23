@@ -10,6 +10,11 @@ from rest_framework.test import APISimpleTestCase
 @patch("config.health.Redis")
 @patch("config.health.connections")
 class HealthViewTests(APISimpleTestCase):
+    def test_open_without_login(self, connections, redis):
+        response = self.client.get("/health", headers={"Authorization": "Bearer invalido"})
+
+        self.assertEqual(response.status_code, 200)
+
     def test_database_and_redis_up_returns_200(self, connections, redis):
         response = self.client.get("/health")
 

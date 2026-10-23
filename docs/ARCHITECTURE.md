@@ -112,7 +112,8 @@ Lookup, em lote:
 - E-mail: dev manda SMTP pro Mailpit do compose (caixa de entrada em http://localhost:8025, porta SMTP 1025, aceita qualquer login). Produção: SMTP real via `EMAIL_*`. Assunto com prefixo `[Tagarela] `. Templates pt-BR sobrescrevem os do allauth (`apps.accounts` antes do allauth em `INSTALLED_APPS`).
 - Templates em `apps/accounts/templates/account/email/`: cada mensagem tem `.txt` e `.html` (multipart; o cliente escolhe). HTML em `base_message.html` (tabelas + estilo inline, cores do design system, sem links), código em `code_block.html`. Cadastro usa `email_confirmation_signup_message.*`, que inclui o `email_confirmation_message.*`. `AccountAdapter.send_mail` põe `code_minutes` (de `AUTH_CODE_TTL_SECONDS`) no contexto. Visual validado no mockup (linha E-mails).
 - Rate limit: padrão do allauth, guardado no cache do Django (LocMem, por processo).
-- `/api/v1` (OCR) continua sem login.
+- Rotas `/api/v1`: exigem `Authorization: Bearer <access_token>`. Padrão do DRF em `REST_FRAMEWORK`: `JWTTokenAuthentication` do allauth + `IsAuthenticated`. Sem token, token inválido ou vencido: 401 (`WWW-Authenticate: Bearer`). Rota nova nasce protegida; aberta só com `AllowAny` explícito.
+- Abertas: `/health` (monitoramento, sem dado de usuário), `/admin/` (login próprio do Django), `/api/auth/*` (o próprio login).
 
 ## Dados
 
@@ -139,7 +140,7 @@ Redis:
 
 ## Endpoints
 
-Sem barra final. Sem throttle. Resposta só JSON. `/api/v1` sem auth. Rotas de auth: seção Auth.
+Sem barra final. Sem throttle. Resposta só JSON. `/api/v1` exige login (Bearer, seção Auth). Rotas de auth: seção Auth.
 
 `GET /health` → 200 `{"status": "ok", "checks": {"database": true, "redis": true}}`. Algum `false` → 503, `"status": "unhealthy"`. Redis com timeout 1 s.
 
@@ -156,6 +157,7 @@ Sem barra final. Sem throttle. Resposta só JSON. `/api/v1` sem auth. Rotas de a
 
 - `words` em ordem alfabética. `source`: `cache` | `database` | `dictionary`.
 - 400: `{"file": ["<mensagem pt-BR>"]}`.
+- 401: sem token válido.
 
 `/admin/`: Django admin. `LexicalEntry` com busca por palavra, filtro por idioma e fonte.
 
@@ -224,9 +226,9 @@ Servidor = `runserver` (dev, hot reload pelo volume `.:/app`). Subida do `api`: 
 - Auth: fluxo inteiro pelo client do Django em `/api/auth/app/v1`. Código lido de `mail.outbox`. `cache.clear()` no `setUp` (rate limit do allauth fica no cache). Google/Apple: `patch` da validação do id_token (`allauth.socialaccount.providers.google.views._verify_and_decode`, `AppleOAuth2Adapter.get_verified_identity_data`).
 - Nunca Paddle, rede ou Redis reais: fake via construtor. View: `unittest.mock.patch("apps.ocr.views.ImageAnalysisService")`. Dicionário: `httpx.get` mockado + payload fixo. Paddle: `patch.object(PaddleOCRProvider, "_engine", fake)`. Redis: client `MagicMock`. Health: `patch` de `config.health.connections` e `config.health.Redis`.
 - Unit: normalização, validator, parse do provider, lookup (ordem cache → banco → dicionário, `source`).
-- API: status + corpo (200, 400).
+- API: status + corpo (200, 400, 401). Endpoint com login: `self.client.force_authenticate(get_user_model()(email=...))` no `setUp`; Bearer de verdade só no teste de auth.
 - Código novo ou alterado: teste junto. Bug corrigido: teste que reproduz o bug.
-- Cobertos: normalização, lookup (ordem, `source`, idioma, gravação), cache, provider do dicionário, provider do Paddle (sem engine real), validator, service de imagem, `POST /api/v1/images/analyze`, `GET /health`, auth (cadastro + código, login, e-mail não verificado, reset, refresh, logout, Google, Apple, token inválido, anti-enumeração, e-mails em texto e HTML com o código e a validade), `User` (manager, display, admin). Fora: criação do engine Paddle (carrega modelo real).
+- Cobertos: normalização, lookup (ordem, `source`, idioma, gravação), cache, provider do dicionário, provider do Paddle (sem engine real), validator, service de imagem, `POST /api/v1/images/analyze`, `GET /health`, auth (cadastro + código, login, e-mail não verificado, reset, refresh, logout, Google, Apple, token inválido, anti-enumeração, Bearer nas rotas `/api/v1` (401 sem token ou token inválido, 200/400 com o access do login), e-mails em texto e HTML com o código e a validade), `User` (manager, display, admin). Fora: criação do engine Paddle (carrega modelo real).
 
 ## Dependências
 

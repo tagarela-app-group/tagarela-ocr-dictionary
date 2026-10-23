@@ -18,8 +18,8 @@ Foto → texto (OCR) → palavras com significado. Reaproveita resultado já con
 
 ## Escopo
 
-- Feito (v1): imagem JPEG/PNG/WEBP até 10 MB → texto extraído + definições por palavra. Health check. Admin pra ver entradas salvas. Conta: cadastro com código no e-mail, login, esqueci a senha por código, Google e Apple (Apple só iOS), token JWT.
-- Próximo: áudio. Exigir login nas rotas `/api/v1`.
+- Feito (v1): imagem JPEG/PNG/WEBP até 10 MB → texto extraído + definições por palavra. Health check. Admin pra ver entradas salvas. Conta: cadastro com código no e-mail, login, esqueci a senha por código, Google e Apple (Apple só iOS), token JWT. Rotas `/api/v1` exigem login.
+- Próximo: captura (rascunho) por texto, foto e áudio.
 - Em análise: idioma vir na rota (hoje env).
 
 ## Lacunas vs app
