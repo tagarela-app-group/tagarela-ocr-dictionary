@@ -1,0 +1,7 @@
+{% extends "account/email/base_message.txt" %}
+
+{% block content %}{% autoescape off %}Alguém tentou criar uma conta no Tagarela com o e-mail {{ email }}, mas ele já tem conta.
+
+Se foi você, entre no app com sua senha. Esqueceu? Toque em "Esqueci minha senha" na tela de entrada.
+
+Se não foi você, ignore este e-mail.{% endautoescape %}{% endblock content %}

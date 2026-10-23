@@ -6,11 +6,14 @@
 - PostgreSQL 16 (psycopg 3). Redis 7 (só cache).
 - OCR: PaddleOCR 3 + PaddlePaddle 3.2.0 CPU (índice extra `paddlepaddle.org.cn` no `requirements.txt`). Pillow valida imagem.
 - HTTP externo: httpx.
+- Auth: django-allauth 65 headless (cliente `app`), token JWT HS256. Login social: Google e Apple.
 - Local: Docker Compose (`api`, `db`, `redis`). Imagem `python:3.12-slim` + libs de sistema `libglib2.0-0 libgl1 libgomp1` (Paddle/OpenCV) e `libpq5` (Postgres).
 
 ## Decisão: monólito modular
 
 Um backend Django, responsabilidade separada por app. Sem microserviço: projeto no início, microserviço = complexidade em deploy, comunicação, logs, observabilidade, rede, manutenção, testes. OCR ou áudio precisar escalar separado: extrair o módulo.
+
+Auth: allauth dentro do monólito (app `accounts`). Better Auth descartado: lib TypeScript, exigiria serviço Node separado (2º runtime e deploy). Port Python dele ainda imaturo (1ª versão em 09/2026, 1 mantenedor).
 
 Princípios: local antes de externo (cache → banco → API). Redis descartável, Postgres é a verdade. Estrutura simples, sem camada extra sem necessidade.
 
@@ -19,6 +22,13 @@ Princípios: local antes de externo (cache → banco → API). Redis descartáve
 ```
 config/                    settings, urls raiz, health.py (GET /health), tests.py (health), wsgi/asgi
 apps/
+  accounts/                conta e login (allauth headless)
+    models.py              User (login por e-mail, `name`, sem username), UserManager
+    forms.py               SignupForm (`name` no cadastro), forms do admin
+    adapters.py            AccountAdapter (aviso de conta existente sem link), SocialAccountAdapter (`name` do Google)
+    templates/account/email/  e-mails pt-BR (base, código, conta existente)
+    admin.py               User no admin
+    tests/                 fluxos de auth, model, admin
   ocr/                     imagem → validação → texto. Orquestra a análise
     providers/paddle.py    único lugar que conhece PaddleOCR
     validators.py          validação do upload
@@ -40,8 +50,8 @@ requirements.txt           dependências da app (imagem)
 requirements-dev.txt       ruff, coverage, pip-audit (fora da imagem)
 ```
 
-- Dependência entre apps: `ocr` → `lexical`. Nunca o contrário.
-- `lexical` sem rota própria (sem `urls.py`).
+- Dependência entre apps: `ocr` → `lexical`. Nunca o contrário. `accounts` não depende de ninguém. App que precisar de usuário: `get_user_model()` / `settings.AUTH_USER_MODEL`, nunca import direto de `accounts.models`.
+- `lexical` e `accounts` sem rota própria (sem `urls.py`). Rotas do allauth: `include` em `config/urls.py`.
 - Stubs vazios do Django: `ocr/models.py`, `ocr/admin.py`, `lexical/views.py`, `lexical/serializers.py`.
 
 ## Onde colocar
@@ -51,6 +61,7 @@ requirements-dev.txt       ruff, coverage, pip-audit (fora da imagem)
 - Regra de negócio, orquestração: `services.py`.
 - Lib/serviço externo: `providers/<nome>.py`. Trocar provedor = mexer só no provider.
 - Cache: `cache.py` do app.
+- Auth (cadastro, login, e-mail, social): config `ACCOUNT_*` / `SOCIALACCOUNT_*` / `HEADLESS_*` em `config/settings.py`. Código só em `apps/accounts/` (adapter, form, template). allauth não aparece fora daí.
 - Tabela: `models.py` + migration + registro em `admin.py`.
 - Setting: env → `config/settings.py` → `.env.example` + tabela Config abaixo.
 - Transversal (health, settings, urls raiz): `config/`.
@@ -80,6 +91,27 @@ Lookup, em lote:
 - Sem definição (404, erro de rede, timeout, resposta vazia): `definitions: []`, salvo igual no Postgres e Redis. Erro transitório fica gravado.
 - Idioma: `LEXICAL_LANGUAGE`. `analyze_text(text, language)` já aceita idioma; view ainda não passa.
 
+## Auth (`accounts`)
+
+- allauth headless, cliente `app`. Base: `/api/auth/app/v1`. Formato de resposta, erros e flows: do allauth (`data`, `meta`, `errors[].param`, `data.flows[].is_pending`).
+- Usuário: `accounts.User` (`AUTH_USER_MODEL`). E-mail único em minúsculo, `name`, sem username. `display` na resposta = `name` ou, vazio, e-mail.
+- Token: JWT HS256 assinado com `DJANGO_SECRET_KEY`. Access `AUTH_ACCESS_TOKEN_TTL_SECONDS`, refresh `AUTH_REFRESH_TOKEN_TTL_SECONDS`. Refresh rotaciona a cada uso. Trocar `DJANGO_SECRET_KEY` derruba todo login.
+- Header: fluxo pendente (verificar e-mail, reset) = `X-Session-Token` (vem em `meta.session_token`). Logado = `Authorization: Bearer <access_token>`.
+- Fluxos:
+  - Cadastro: `POST auth/signup` `{name, email, password}` → 401, flow `verify_email` pendente, código por e-mail → `POST auth/email/verify` `{key}` → 200 + `meta.access_token`, `meta.refresh_token`.
+  - Login: `POST auth/login` `{email, password}` → 200 + tokens. Senha errada → 400. E-mail não verificado → 401 `verify_email` (código novo).
+  - Esqueci a senha: `POST auth/password/request` `{email}` → 401, flow `password_reset_by_code` → `GET auth/password/reset` (header `X-Password-Reset-Key: <código>`) valida → `POST auth/password/reset` `{key, password}` → 200 + tokens.
+  - Google/Apple: login nativo no app → `POST auth/provider/token` `{provider, process: "login", token: {client_id, id_token}}` → 200 + tokens. Backend valida assinatura e `aud` do `id_token`.
+  - Renovar: `POST tokens/refresh` `{refresh_token}` → 200, novo par em `data`.
+  - Sessão: `GET auth/session` (Bearer) → usuário. Sair: `DELETE auth/session` (Bearer) → 401, refresh deixa de valer. Access vale até expirar.
+- Código: 6 dígitos, vale `AUTH_CODE_TTL_SECONDS`, 3 tentativas (padrão do allauth).
+- Senha: validadores padrão do Django (mín. 8, não comum, não só número, não parecida com o e-mail). Mensagem pt-BR.
+- Anti-enumeração: cadastro com e-mail existente e reset de e-mail desconhecido respondem igual ao caso normal. E-mail existente recebe aviso sem link. E-mail desconhecido não recebe nada (`ACCOUNT_EMAIL_UNKNOWN_ACCOUNTS = False`). Sem link porque não há frontend web (`HEADLESS_ONLY`).
+- Social: provider sem client ID na env fica desligado. `GOOGLE_CLIENT_ID` = client ID web (o `serverClientId` do app; é o `aud` do id_token). `APPLE_CLIENT_ID` = bundle ID do iOS (lista por vírgula). Apple só no iOS: Android exigiria fluxo web + endpoint de callback. E-mail verificado pelo provider = entra na conta que já tem esse e-mail. Nome: Google manda; Apple não manda no token (`name` vazio).
+- E-mail: `EMAIL_BACKEND` console no dev (código sai em `docker compose logs api`). Produção: SMTP via `EMAIL_*`. Assunto com prefixo `[Tagarela] `. Templates pt-BR sobrescrevem os do allauth (`apps.accounts` antes do allauth em `INSTALLED_APPS`).
+- Rate limit: padrão do allauth, guardado no cache do Django (LocMem, por processo).
+- `/api/v1` (OCR) continua sem login.
+
 ## Dados
 
 `LexicalEntry` (tabela `lexical_lexicalentry`):
@@ -96,6 +128,8 @@ Lookup, em lote:
 - Grava com `bulk_create` + upsert (`update_conflicts`).
 - `data` em JSON: guarda formato de qualquer provedor sem criar tabela nova.
 
+`User` (tabela `accounts_user`): `email` (único), `name` (char 150, pode vazio), `password`, `is_active`, `is_staff`, `is_superuser`, `last_login`, `date_joined`. Tabelas do allauth: `account_emailaddress` (e-mail + `verified`), `socialaccount_socialaccount` (vínculo Google/Apple por `uid`).
+
 Redis:
 
 - Chave `lexical:{lang}:{palavra}` (ex.: `lexical:en:architecture`). Valor JSON `{word, definitions, source}`. TTL `LEXICAL_CACHE_TTL_SECONDS`.
@@ -103,7 +137,7 @@ Redis:
 
 ## Endpoints
 
-Sem barra final. Sem auth, sem throttle. Resposta só JSON.
+Sem barra final. Sem throttle. Resposta só JSON. `/api/v1` sem auth. Rotas de auth: seção Auth.
 
 `GET /health` → 200 `{"status": "ok", "checks": {"database": true, "redis": true}}`. Algum `false` → 503, `"status": "unhealthy"`. Redis com timeout 1 s.
 
@@ -140,6 +174,14 @@ Sem barra final. Sem auth, sem throttle. Resposta só JSON.
 | `LEXICAL_CACHE_TTL_SECONDS` | 86400 (24 h) | |
 | `DICTIONARY_API_BASE_URL` | `https://api.dictionaryapi.dev/api/v2/entries` | |
 | `DICTIONARY_API_TIMEOUT_SECONDS` | 5 | |
+| `AUTH_ACCESS_TOKEN_TTL_SECONDS` | 300 (5 min) | |
+| `AUTH_REFRESH_TOKEN_TTL_SECONDS` | 2592000 (30 dias) | |
+| `AUTH_CODE_TTL_SECONDS` | 900 (15 min) | código de e-mail e de reset |
+| `GOOGLE_CLIENT_ID` | vazio (desligado) | client ID web |
+| `APPLE_CLIENT_ID` | vazio (desligado) | bundle ID iOS, lista por vírgula |
+| `EMAIL_BACKEND` | console | SMTP: `django.core.mail.backends.smtp.EmailBackend` |
+| `EMAIL_HOST`, `_PORT`, `_HOST_USER`, `_HOST_PASSWORD`, `_USE_TLS` | `localhost`, 587, vazio, vazio, `True` | SMTP |
+| `DEFAULT_FROM_EMAIL` | `Tagarela <nao-responda@localhost>` | |
 
 Fixo em settings (sem env): content types e formatos aceitos, `LANGUAGE_CODE` pt-br, `TIME_ZONE` America/Sao_Paulo.
 
@@ -149,7 +191,8 @@ Subir: `README.md`. Comandos via `docker compose exec`:
 
 - Testes: `api python manage.py test`. Cobertura: `api sh -c "pip install -r requirements-dev.txt && coverage run manage.py test && coverage report"`.
 - Migration: `api python manage.py makemigrations` / `migrate`.
-- Admin: `api python manage.py createsuperuser` → http://localhost:8000/admin/.
+- Admin: `api python manage.py createsuperuser` (pede e-mail) → http://localhost:8000/admin/.
+- Código de verificação/reset no dev: `docker compose logs api` (e-mail no console).
 - Postgres: `db psql -U <POSTGRES_USER> -d <POSTGRES_DB>` → `SELECT id, word, normalized_word, language, source, data, created_at FROM lexical_lexicalentry ORDER BY id DESC;`
 - Redis: `redis redis-cli KEYS 'lexical:*'`, `redis redis-cli GET 'lexical:en:<palavra>'`.
 - Postman: POST, Body → form-data, key `file` tipo File. Content-Type automático.
@@ -176,11 +219,12 @@ Servidor = `runserver` (dev, hot reload pelo volume `.:/app`). Sem setup de prod
 - Runner do Django (`manage.py test`). Sem pytest por enquanto. Base: `django.test.TestCase` (banco), `SimpleTestCase` (sem banco), `rest_framework.test.APISimpleTestCase` (endpoint sem banco), `APITestCase` (endpoint com banco).
 - Roda no container `api` (precisa do Postgres).
 - Arquivo: pacote `apps/<app>/tests/` (`__init__.py` + `test_<módulo>.py`). Transversal (`config/`): `config/tests.py`. Helper compartilhado no pacote do app (ex.: `apps/ocr/tests/images.py`).
+- Auth: fluxo inteiro pelo client do Django em `/api/auth/app/v1`. Código lido de `mail.outbox`. `cache.clear()` no `setUp` (rate limit do allauth fica no cache). Google/Apple: `patch` da validação do id_token (`allauth.socialaccount.providers.google.views._verify_and_decode`, `AppleOAuth2Adapter.get_verified_identity_data`).
 - Nunca Paddle, rede ou Redis reais: fake via construtor. View: `unittest.mock.patch("apps.ocr.views.ImageAnalysisService")`. Dicionário: `httpx.get` mockado + payload fixo. Paddle: `patch.object(PaddleOCRProvider, "_engine", fake)`. Redis: client `MagicMock`. Health: `patch` de `config.health.connections` e `config.health.Redis`.
 - Unit: normalização, validator, parse do provider, lookup (ordem cache → banco → dicionário, `source`).
 - API: status + corpo (200, 400).
 - Código novo ou alterado: teste junto. Bug corrigido: teste que reproduz o bug.
-- Cobertos: normalização, lookup (ordem, `source`, idioma, gravação), cache, provider do dicionário, provider do Paddle (sem engine real), validator, service de imagem, `POST /api/v1/images/analyze`, `GET /health`. Fora: criação do engine Paddle (carrega modelo real).
+- Cobertos: normalização, lookup (ordem, `source`, idioma, gravação), cache, provider do dicionário, provider do Paddle (sem engine real), validator, service de imagem, `POST /api/v1/images/analyze`, `GET /health`, auth (cadastro + código, login, e-mail não verificado, reset, refresh, logout, Google, Apple, token inválido, anti-enumeração), `User` (manager, display, admin). Fora: criação do engine Paddle (carrega modelo real).
 
 ## Dependências
 

@@ -1,0 +1,7 @@
+{% extends "account/email/base_message.txt" %}
+
+{% block content %}{% autoescape off %}Seu código pra confirmar o e-mail no Tagarela:
+
+{{ code }}
+
+Digite no app pra continuar. Se você não criou conta, ignore este e-mail.{% endautoescape %}{% endblock content %}

@@ -19,7 +19,7 @@ App cliente (Flutter): repo `tagarela-app-group/tagarela`.
 2. Cada coisa no seu lugar. Conteúdo novo vai no doc do assunto. Doc não repete outro doc.
 3. Docs: só o necessário. Objetivo, estilo caveman, sem perder informação.
 4. View fina: serializer valida → service faz → `Response`. Regra de negócio só em service.
-5. Lib ou serviço externo (PaddleOCR, dicionário, Redis) só dentro de `providers/` ou `cache.py`. Resto do código não importa direto.
+5. Lib ou serviço externo (PaddleOCR, dicionário, Redis) só dentro de `providers/` ou `cache.py`. Resto do código não importa direto. Exceção: allauth (framework de auth) só em `apps/accounts/` e `config/` (settings, urls).
 6. Limite, URL, TTL, idioma: sempre setting (env → `config/settings.py` → `.env.example`). Nunca valor solto no código. Segredo só no `.env` (fora do git).
 7. Contrato `/api/v1` é público (app consome). Não quebrar. Mudança incompatível: avisar usuário + nova versão.
 8. Model mudou: migration junto (`makemigrations`). Nunca editar migration já mergeada.
