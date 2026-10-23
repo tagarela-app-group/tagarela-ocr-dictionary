@@ -28,6 +28,7 @@ INSTALLED_APPS = [
     "allauth.headless",
     "apps.ocr",
     "apps.lexical",
+    "apps.captures",
 ]
 
 MIDDLEWARE = [
@@ -128,6 +129,22 @@ EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS", "True").lower() in {"1", "true",
 DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "Tagarela <nao-responda@localhost>")
 
 REDIS_URL = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
+
+CELERY_BROKER_URL = os.environ.get("CELERY_BROKER_URL", REDIS_URL)
+CELERY_WORKER_CONCURRENCY = int(os.environ.get("CELERY_WORKER_CONCURRENCY", "1"))
+CELERY_WORKER_PREFETCH_MULTIPLIER = 1
+CELERY_TASK_ACKS_LATE = True
+CELERY_TASK_REJECT_ON_WORKER_LOST = True
+CELERY_TASK_IGNORE_RESULT = True
+CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
+
+CAPTURE_UPLOAD_DIR = Path(os.environ.get("CAPTURE_UPLOAD_DIR", "/tmp/tagarela/captures"))
+CAPTURE_MAX_TEXT_LENGTH = int(os.environ.get("CAPTURE_MAX_TEXT_LENGTH", "2000"))
+CAPTURE_MAX_TERMS = int(os.environ.get("CAPTURE_MAX_TERMS", "50"))
+CAPTURE_MAX_TERM_LENGTH = int(os.environ.get("CAPTURE_MAX_TERM_LENGTH", "100"))
+CAPTURE_PAGE_SIZE = int(os.environ.get("CAPTURE_PAGE_SIZE", "50"))
+CAPTURE_PROCESS_MAX_RETRIES = int(os.environ.get("CAPTURE_PROCESS_MAX_RETRIES", "3"))
+CAPTURE_PROCESS_RETRY_SECONDS = int(os.environ.get("CAPTURE_PROCESS_RETRY_SECONDS", "30"))
 
 OCR_MAX_IMAGE_SIZE_BYTES = int(os.environ.get("OCR_MAX_IMAGE_SIZE_BYTES", str(10 * 1024 * 1024)))
 OCR_ALLOWED_CONTENT_TYPES = {

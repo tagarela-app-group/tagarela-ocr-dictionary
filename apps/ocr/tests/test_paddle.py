@@ -72,3 +72,15 @@ class PaddleOCRProviderTests(SimpleTestCase):
             self.extract_text(engine)
 
         self.assertFalse(engine.paths[0].exists())
+
+
+class PaddleOCRProviderFromPathTests(SimpleTestCase):
+    def test_reads_the_given_path_without_copying(self):
+        engine = FakeEngine([{"res": {"rec_texts": ["MIND", "THE GAP"]}}])
+        path = Path(__file__)
+
+        with patch.object(PaddleOCRProvider, "_engine", engine):
+            text = PaddleOCRProvider().extract_text_from_path(path)
+
+        self.assertEqual(text, "MIND THE GAP")
+        self.assertEqual(engine.paths, [path])
