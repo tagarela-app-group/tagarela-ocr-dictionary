@@ -26,6 +26,6 @@ App cliente (Flutter): repo `tagarela-app-group/tagarela`.
 9. Mudou endpoint, contrato, model, fluxo ou env: atualizar doc do assunto junto.
 10. Seguir sempre boas práticas de código, estrutura e arquitetura. Sem camada nova sem necessidade.
 11. Pedido quebra regra ou boa prática: avisar usuário antes de fazer. Dizer qual regra e propor alternativa.
-12. Código novo ou alterado (service, provider, validator, view): teste junto. Regras em `docs/ARCHITECTURE.md` (Testes).
+12. Toda task que cria ou altera código (service, provider, cache, validator, view, model): teste junto, sempre que fizer sentido. Bug corrigido: teste que reproduz. Sem teste: dizer o motivo no PR. Regras em `docs/ARCHITECTURE.md` (Testes).
 13. Task finalizada: branch própria + commit + push + PR pra `develop`, na hora, sem perguntar. Fluxo em `docs/ARCHITECTURE.md` (Git). Commit e PR sem `Co-Authored-By` nem outra assinatura de IA.
 14. Merge: PR pra `develop` com esteira verde = eu faço. PR `develop` → `main` (prod) = só o usuário aprova. Nunca commitar direto na `develop` nem na `main`.
