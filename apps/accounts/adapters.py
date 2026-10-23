@@ -1,4 +1,5 @@
 from allauth.account.adapter import DefaultAccountAdapter
+from allauth.headless.adapter import DefaultHeadlessAdapter
 from allauth.socialaccount.adapter import DefaultSocialAccountAdapter
 from django.conf import settings
 
@@ -20,3 +21,14 @@ class SocialAccountAdapter(DefaultSocialAccountAdapter):
         user.name = (data.get("name") or full_name)[:150]
 
         return user
+
+
+class HeadlessAdapter(DefaultHeadlessAdapter):
+    def serialize_user(self, user) -> dict:
+        data = super().serialize_user(user)
+        if not user.pk:
+            return data
+        pictures = (account.get_avatar_url() for account in user.socialaccount_set.all())
+        extra = {"name": user.name, "picture": next((url for url in pictures if url), None)}
+
+        return {**data, **{key: value for key, value in extra.items() if value}}

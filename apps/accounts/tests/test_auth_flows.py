@@ -61,6 +61,8 @@ class SignupTests(AuthFlowTestCase):
         self.assertEqual(response.status_code, 200)
         body = response.json()
         self.assertEqual(body["data"]["user"]["display"], "Ana Souza")
+        self.assertEqual(body["data"]["user"]["name"], "Ana Souza")
+        self.assertNotIn("picture", body["data"]["user"])
         self.assertIn("access_token", body["meta"])
         self.assertIn("refresh_token", body["meta"])
         self.assertTrue(EmailAddress.objects.get(email="ana@example.com").verified)
@@ -168,6 +170,7 @@ class LoginTests(AuthFlowTestCase):
 
         self.assertEqual(session.status_code, 200)
         self.assertEqual(session.json()["data"]["user"]["email"], "ana@example.com")
+        self.assertEqual(session.json()["data"]["user"]["name"], "Ana")
         self.assertEqual(refreshed.status_code, 200)
         self.assertNotEqual(refreshed.json()["data"]["refresh_token"], tokens["refresh_token"])
 
@@ -241,12 +244,17 @@ class SocialLoginTests(AuthFlowTestCase):
             "email_verified": True,
             "given_name": "Bia",
             "family_name": "Lima",
+            "picture": "https://lh3.googleusercontent.com/a/bia",
         }
 
         response = self.provider_login("google", GOOGLE_CLIENT_ID)
 
         self.assertEqual(response.status_code, 200)
         self.assertIn("access_token", response.json()["meta"])
+        self.assertEqual(response.json()["data"]["user"]["name"], "Bia Lima")
+        self.assertEqual(
+            response.json()["data"]["user"]["picture"], "https://lh3.googleusercontent.com/a/bia"
+        )
         user = User.objects.get(email="bia@gmail.com")
         self.assertEqual(user.name, "Bia Lima")
         self.assertFalse(user.has_usable_password())
@@ -282,6 +290,8 @@ class SocialLoginTests(AuthFlowTestCase):
         self.assertEqual(response.status_code, 200)
         user = User.objects.get(email="x1@privaterelay.appleid.com")
         self.assertEqual(user.name, "")
+        self.assertNotIn("name", response.json()["data"]["user"])
+        self.assertNotIn("picture", response.json()["data"]["user"])
 
     def test_invalid_token_is_rejected(self):
         response = self.provider_login("google", GOOGLE_CLIENT_ID)

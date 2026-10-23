@@ -110,6 +110,7 @@ SOCIALACCOUNT_PROVIDERS = {
 }
 
 HEADLESS_ONLY = True
+HEADLESS_ADAPTER = "apps.accounts.adapters.HeadlessAdapter"
 HEADLESS_CLIENTS = ("app",)
 HEADLESS_TOKEN_STRATEGY = "allauth.headless.tokens.strategies.jwt.JWTTokenStrategy"
 HEADLESS_JWT_ALGORITHM = "HS256"

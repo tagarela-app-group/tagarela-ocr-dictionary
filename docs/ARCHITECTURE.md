@@ -95,6 +95,7 @@ Lookup, em lote:
 
 - allauth headless, cliente `app`. Base: `/api/auth/app/v1`. Formato de resposta, erros e flows: do allauth (`data`, `meta`, `errors[].param`, `data.flows[].is_pending`).
 - Usuário: `accounts.User` (`AUTH_USER_MODEL`). E-mail único em minúsculo, `name`, sem username. `display` na resposta = `name` ou, vazio, e-mail.
+- Usuário na resposta (`data.user`): campos do allauth (`id`, `display`, `email`, `has_usable_password`) + `name` e `picture` (`HeadlessAdapter.serialize_user`). `picture` = foto da conta social (Google); some quando não há. `name` some quando vazio (Apple sem nome).
 - Token: JWT HS256 assinado com `DJANGO_SECRET_KEY`. Access `AUTH_ACCESS_TOKEN_TTL_SECONDS`, refresh `AUTH_REFRESH_TOKEN_TTL_SECONDS`. Refresh rotaciona a cada uso. Trocar `DJANGO_SECRET_KEY` derruba todo login.
 - Header: fluxo pendente (verificar e-mail, reset) = `X-Session-Token` (vem em `meta.session_token`). Logado = `Authorization: Bearer <access_token>`.
 - Fluxos:
