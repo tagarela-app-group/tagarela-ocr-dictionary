@@ -5,6 +5,7 @@ from rest_framework import serializers, status
 from rest_framework.exceptions import APIException
 
 from apps.captures.models import Capture, CaptureTerm
+from apps.vocabulary.services import VocabularyService
 
 
 class CaptureConflict(APIException):
@@ -13,6 +14,9 @@ class CaptureConflict(APIException):
 
 
 class CaptureService:
+    def __init__(self, vocabulary: VocabularyService | None = None):
+        self.vocabulary = vocabulary or VocabularyService()
+
     def list(self, user, updated_since=None):
         captures = Capture.objects.filter(user=user).prefetch_related("terms")
         if updated_since is None:
@@ -83,9 +87,11 @@ class CaptureService:
         if not capture.terms.exists():
             raise serializers.ValidationError({"terms": ["Escolha pelo menos um termo."]})
 
-        capture.status = Capture.Status.ANALYZED
-        capture.analyzed_at = timezone.now()
-        capture.save(update_fields=["status", "analyzed_at", "updated_at"])
+        with transaction.atomic():
+            capture.status = Capture.Status.ANALYZED
+            capture.analyzed_at = timezone.now()
+            capture.save(update_fields=["status", "analyzed_at", "updated_at"])
+            self.vocabulary.add_terms(capture.user, [term.text for term in capture.terms.all()])
 
         return capture
 

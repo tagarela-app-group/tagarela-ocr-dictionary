@@ -7,5 +7,6 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("health", health, name="health"),
     path("api/v1/", include("apps.captures.urls")),
+    path("api/v1/", include("apps.vocabulary.urls")),
     path("api/auth/", include("allauth.headless.urls")),
 ]

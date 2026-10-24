@@ -38,6 +38,14 @@ apps/
     views.py, urls.py      rotas /api/v1/captures
     admin.py               Capture (termos inline) no admin
     tests/                 testes do app (helpers.py: usuário, captura)
+  vocabulary/              vocabulário da pessoa: grupos e termos confirmados
+    models.py              Group, Term
+    serializers.py         entrada (estrita) e saída
+    services.py            VocabularyService (listar, criar grupo, mover, entrar termos), term_key
+    views.py, urls.py      rotas /api/v1/vocabulary, groups, terms/move
+    admin.py               Group e Term no admin
+    migrations/0002        termos das capturas já analisadas entram no vocabulário
+    tests/                 testes do app (helpers.py: grupo, termo)
 docs/                      PRODUCT, ARCHITECTURE
 .github/workflows/ci.yml   esteira
 pyproject.toml             config do ruff e coverage (sem dependência)
@@ -45,7 +53,7 @@ requirements.txt           dependências da app (imagem)
 requirements-dev.txt       ruff, coverage, pip-audit (fora da imagem)
 ```
 
-- Dependência entre apps: `captures` → `common`. `common` não depende de ninguém. `accounts` não depende de ninguém. App que precisar de usuário: `get_user_model()` / `settings.AUTH_USER_MODEL`, nunca import direto de `accounts.models`.
+- Dependência entre apps: `captures` → `vocabulary` (confirmar entra os termos) → `common`. `vocabulary` não importa `captures` (só a migration 0002 lê as capturas). `common` não depende de ninguém. `accounts` não depende de ninguém. App que precisar de usuário: `get_user_model()` / `settings.AUTH_USER_MODEL`, nunca import direto de `accounts.models`.
 - `accounts` sem rota própria (sem `urls.py`). Rotas do allauth: `include` em `config/urls.py`.
 
 ## Onde colocar
@@ -58,19 +66,29 @@ requirements-dev.txt       ruff, coverage, pip-audit (fora da imagem)
 - Tabela: `models.py` + migration + registro em `admin.py`.
 - Setting: env → `config/settings.py` → `.env.example` + tabela Config abaixo.
 - Transversal (health, settings, urls raiz): `config/`.
-- Módulo novo (ex.: `vocabulary`): app novo `apps/<nome>/` em `INSTALLED_APPS`, mesma estrutura dos atuais.
+- Módulo novo: app novo `apps/<nome>/` em `INSTALLED_APPS`, mesma estrutura dos atuais.
 
 ## Fluxo
 
-Captura: app cria com o texto (`POST captures` com `text`; foto e áudio: texto já extraído no celular) → `ready`. Arquivo nunca sobe. Depois: app salva texto editado e termos (`PATCH`) → confirma (`POST confirm`, `analyzed`).
+Captura: app cria com o texto (`POST captures` com `text`; foto e áudio: texto já extraído no celular) → `ready`. Arquivo nunca sobe. Depois: app salva texto editado e termos (`PATCH`) → confirma (`POST confirm`, `analyzed`) → termos entram no vocabulário, sem grupo. Pessoa cria grupo e move os termos (`POST groups`, `POST terms/move`).
 
 ## Captura (`captures`)
 
 - Rascunho do que a pessoa capturou. Offline first: nasce no celular, o app sincroniza quando tiver internet. `id` = UUID gerado no app: mesmo `id` de novo = 200 com o que já existe (envio repetido não duplica). `id` de outro usuário = 409.
 - Status: `ready` → `analyzed` (confirmou a análise). Nasce sempre `ready`, com o texto (digitado ou extraído no celular).
 - Texto e termos: `text` = atual (editável), `original_text` = o que veio do celular (digitado ou extraído). Termo = trecho do texto (`text`, `start`, `end` em caracteres). Palavra e expressão que a contém coexistem ("mind" e "mind the gap"). `PATCH` com `terms` troca a lista toda; só `text` mantém os termos que ainda batem no mesmo lugar. Edita só em `ready`.
-- Confirmar: exige 1+ termo → `analyzed` (`analyzed_at`). De novo em `analyzed`: 200. A IA que monta a ficha de cada termo entra depois.
+- Confirmar: exige 1+ termo → `analyzed` (`analyzed_at`) e os termos entram no vocabulário (mesma transação, ver Vocabulário). De novo em `analyzed`: 200, nada entra. A IA que monta a ficha de cada termo entra depois.
 - Descartar: só marca `discarded_at`. Registro fica no banco; some da lista e do detalhe. Sincronização (`updated_since`) traz o descarte, pro outro aparelho apagar.
+
+## Vocabulário (`vocabulary`)
+
+- Termo nasce ao confirmar a captura, sem grupo ("Sem grupo" no app). Grupo é sempre escolha da pessoa, nunca da IA.
+- Termo único por pessoa: `key` = texto com espaços juntados, em minúsculo (`casefold`). Já existe = não entra de novo (ficam o grupo e o texto da 1ª vez). Repetido na mesma captura: entra uma vez. Outra pessoa com o mesmo termo: cada uma tem o seu.
+- Texto = como foi escrito na 1ª captura (espaços juntados). `kind`: com espaço = `expression`, sem = `word`. `level` nasce 0 (SRS depois). `translation` vazia até a IA da ficha.
+- Grupo: nome até `VOCABULARY_GROUP_NAME_MAX_LENGTH`, espaços juntados, único por pessoa ignorando maiúscula. `icon` = id do catálogo do app (slug `a-z0-9_`, até 30): a API não guarda a lista, pro app ganhar ícone sem mexer aqui. `accent` = uma das 6 cores (`violet`, `coral`, `mint`, `mango`, `sky`, `pink`).
+- Mover: lista de termos + grupo de destino (`null` = volta pra Sem grupo). Tudo ou nada: termo ou grupo que não é da pessoa = 400, nada muda. Desfazer no app = mover de volta pro grupo de origem.
+- Ordem: grupo e termo mais novos primeiro (`created_at`).
+- Apagar grupo: sem rota ainda. Model já solta os termos (`SET_NULL` = Sem grupo).
 
 ## Auth (`accounts`)
 
@@ -104,6 +122,12 @@ Captura: app cria com o texto (`POST captures` com `text`; foto e áudio: texto 
 
 `CaptureTerm` (tabela `captures_captureterm`): `capture`, `text` (char 255), `start`, `end`. Único (`capture`, `start`, `end`). Ordem: `start`, depois o maior primeiro.
 
+`Group` (tabela `vocabulary_group`): `id` (UUID), `user`, `name` (char 100), `icon` (char 30), `accent`, `created_at`. Único (`lower(name)`, `user`).
+
+`Term` (tabela `vocabulary_term`): `id` (UUID), `user`, `group` (nulo = Sem grupo; grupo apagado = nulo), `text`, `key` (char 255), `kind` (`word`, `expression`), `translation` (pode vazio), `level` (0 a 5), `created_at`. Único (`user`, `key`).
+
+Migration `vocabulary.0002`: termos das capturas já analisadas (descartadas depois inclusive) entram no vocabulário, na ordem da análise, sem repetir.
+
 Migration `captures.0002`: apagou as capturas sem texto (`waiting_file`, `processing`, `failed`, só do dev) e a tabela `lexical_lexicalentry` do dicionário que saiu.
 
 ## Endpoints
@@ -135,7 +159,27 @@ Captura na resposta:
 }
 ```
 
-`/admin/`: Django admin. `Capture` com busca por texto e e-mail, filtro por tipo e status, termos na própria tela.
+Vocabulário (`/api/v1`). Erro de validação: 400 `{"campo": ["<mensagem pt-BR>"]}`.
+
+| Rota | Corpo | Resposta |
+| --- | --- | --- |
+| `GET /api/v1/vocabulary` | | 200 `{groups, ungrouped}` |
+| `POST /api/v1/groups` | JSON `{name, icon, accent}` | 201 grupo (com `terms: []`). 400 nome vazio, longo ou já usado ("Você já tem um grupo com esse nome.") |
+| `POST /api/v1/terms/move` | JSON `{terms: [id, ...], group: id ou null}`. 1+ termo | 200 vocabulário atualizado. 400 termo ou grupo que não existe (ou de outra pessoa) |
+
+Vocabulário na resposta:
+
+```json
+{
+  "groups": [{
+    "id": "5c1e…", "name": "Viagem", "icon": "travel", "accent": "sky",
+    "terms": [{ "id": "9a0d…", "text": "jet lag", "translation": "", "kind": "expression", "level": 0 }]
+  }],
+  "ungrouped": [{ "id": "71b2…", "text": "touch base", "translation": "", "kind": "expression", "level": 0 }]
+}
+```
+
+`/admin/`: Django admin. `Capture` com busca por texto e e-mail, filtro por tipo e status, termos na própria tela. `Group` e `Term` com busca por nome/texto e e-mail.
 
 ## Config (env)
 
@@ -152,6 +196,7 @@ Captura na resposta:
 | `CAPTURE_MAX_TERMS` | 50 | termos por captura |
 | `CAPTURE_MAX_TERM_LENGTH` | 100 | caracteres por termo |
 | `CAPTURE_PAGE_SIZE` | 50 | |
+| `VOCABULARY_GROUP_NAME_MAX_LENGTH` | 30 | caracteres do nome do grupo |
 | `AUTH_ACCESS_TOKEN_TTL_SECONDS` | 300 (5 min) | |
 | `AUTH_REFRESH_TOKEN_TTL_SECONDS` | 2592000 (30 dias) | |
 | `AUTH_CODE_TTL_SECONDS` | 900 (15 min) | código de e-mail e de reset |
@@ -171,7 +216,7 @@ Subir: `README.md`. Comandos via `docker compose exec`:
 - Migration: `api python manage.py makemigrations`. `migrate` roda sozinho na subida do `api`.
 - Admin: `api python manage.py createsuperuser` (pede e-mail) → http://localhost:8000/admin/.
 - Código de verificação/reset no dev: Mailpit em http://localhost:8025 (e-mail renderizado, texto, cabeçalhos e checagem de compatibilidade do HTML).
-- Capturas: `db psql -U <POSTGRES_USER> -d <POSTGRES_DB>` → `SELECT id, source, status, text, updated_at FROM captures_capture ORDER BY updated_at DESC;`
+- Capturas: `db psql -U <POSTGRES_USER> -d <POSTGRES_DB>` → `SELECT id, source, status, text, updated_at FROM captures_capture ORDER BY updated_at DESC;`. Vocabulário: `SELECT text, kind, group_id FROM vocabulary_term ORDER BY created_at DESC;`
 - Ambiente de antes da limpeza (com `worker` e `redis`): `docker compose up --build --remove-orphans`. Volumes velhos: `docker volume rm api_capture_uploads api_whisper_models`.
 
 Formato e análise: fora do container (ruff não está na imagem). Venv local: `python -m venv .venv` → `pip install -r requirements-dev.txt` → `ruff format .`, `ruff check --fix .`.
@@ -198,10 +243,10 @@ Servidor = `runserver` (dev, hot reload pelo volume `.:/app`). Subida do `api`: 
 - Arquivo: pacote `apps/<app>/tests/` (`__init__.py` + `test_<módulo>.py`). Transversal (`config/`): `config/tests.py`. Helper compartilhado no pacote do app (ex.: `apps/captures/tests/helpers.py`).
 - Auth: fluxo inteiro pelo client do Django em `/api/auth/app/v1`. Código lido de `mail.outbox`. `cache.clear()` no `setUp` (rate limit do allauth fica no cache). Google/Apple: `patch` da validação do id_token (`allauth.socialaccount.providers.google.views._verify_and_decode`, `AppleOAuth2Adapter.get_verified_identity_data`).
 - Nunca rede real: fake via construtor ou `patch`. Health: `patch` de `config.health.connections`.
-- Captura: `make_user`, `make_capture` em `apps/captures/tests/helpers.py`.
+- Captura: `make_user`, `make_capture` em `apps/captures/tests/helpers.py`. Vocabulário: `make_group`, `make_term` em `apps/vocabulary/tests/helpers.py`. Migration de dados: importar o módulo (`import_module`) e chamar a função com `django.apps.apps`.
 - API: status + corpo (200, 400, 401). Endpoint com login: `self.client.force_authenticate(get_user_model()(email=...))` no `setUp`; Bearer de verdade só no teste de auth.
 - Código novo ou alterado: teste junto. Bug corrigido: teste que reproduz o bug.
-- Cobertos: `GET /health`, auth (cadastro + código, login, e-mail não verificado, reset, refresh, logout, Google, Apple, token inválido, anti-enumeração, Bearer nas rotas `/api/v1` (401 sem token ou token inválido, 200 com o access do login), e-mails em texto e HTML com o código e a validade), `User` (manager, display, admin), `StrictSerializer`, captura (criar, sem texto em qualquer fonte, id repetido e de outro usuário, campos e valores inválidos, lista com cursor e `updated_since`, detalhe, termos com palavra dentro de expressão, editar texto mantendo termos, termo que não bate, 409 em `analyzed`, confirmar, descartar).
+- Cobertos: `GET /health`, auth (cadastro + código, login, e-mail não verificado, reset, refresh, logout, Google, Apple, token inválido, anti-enumeração, Bearer nas rotas `/api/v1` (401 sem token ou token inválido, 200 com o access do login), e-mails em texto e HTML com o código e a validade), `User` (manager, display, admin), `StrictSerializer`, captura (criar, sem texto em qualquer fonte, id repetido e de outro usuário, campos e valores inválidos, lista com cursor e `updated_since`, detalhe, termos com palavra dentro de expressão, editar texto mantendo termos, termo que não bate, 409 em `analyzed`, confirmar, descartar), vocabulário (listar com e sem grupo, ordem, criar grupo, nome repetido ignorando maiúscula, campos inválidos, mover, voltar pra Sem grupo, termo ou grupo de outra pessoa, termo repetido não entra, confirmar entra os termos, migration das capturas analisadas).
 
 ## Dependências
 
