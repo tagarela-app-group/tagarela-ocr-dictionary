@@ -1,13 +1,12 @@
 from django.conf import settings
 from rest_framework import status
 from rest_framework.pagination import CursorPagination
-from rest_framework.parsers import JSONParser, MultiPartParser
+from rest_framework.parsers import JSONParser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.captures.serializers import (
     CaptureCreateSerializer,
-    CaptureFileSerializer,
     CaptureListParamsSerializer,
     CaptureSerializer,
     CaptureUpdateSerializer,
@@ -68,20 +67,6 @@ class CaptureDetailView(APIView):
         service.discard(service.get(request.user, capture_id, include_discarded=True))
 
         return Response(status=status.HTTP_204_NO_CONTENT)
-
-
-class CaptureFileView(APIView):
-    parser_classes = [MultiPartParser]
-
-    def put(self, request, capture_id):
-        service = CaptureService()
-        capture = service.get(request.user, capture_id)
-        serializer = CaptureFileSerializer(data=request.data, context={"capture": capture})
-        serializer.is_valid(raise_exception=True)
-
-        capture = service.receive_file(capture, serializer.validated_data["file"])
-
-        return Response(CaptureSerializer(capture).data, status=status.HTTP_202_ACCEPTED)
 
 
 class CaptureConfirmView(APIView):

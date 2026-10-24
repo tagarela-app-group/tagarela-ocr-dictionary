@@ -1,6 +1,6 @@
 # Tagarela API
 
-Backend (Django REST) do Tagarela: recebe foto, extrai o texto (OCR) e devolve as palavras com definição.
+Backend (Django REST) do Tagarela: conta, login e capturas (o texto da foto e do áudio chega já extraído pelo app).
 
 Comece por [CLAUDE.md](CLAUDE.md).
 
@@ -13,5 +13,4 @@ API em http://localhost:8000. E-mails do dev (códigos de cadastro e senha) em h
 
 ```sh
 curl http://localhost:8000/health
-curl -F "file=@imagem.png" http://localhost:8000/api/v1/images/analyze   # 1ª chamada lenta: carrega o OCR
 ```

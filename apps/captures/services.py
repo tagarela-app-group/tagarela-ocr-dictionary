@@ -5,10 +5,6 @@ from rest_framework import serializers, status
 from rest_framework.exceptions import APIException
 
 from apps.captures.models import Capture, CaptureTerm
-from apps.captures.tasks import enqueue_processing
-from apps.captures.uploads import delete_upload, save_upload
-
-RECEIVES_FILE = {Capture.Status.WAITING_FILE, Capture.Status.PROCESSING, Capture.Status.FAILED}
 
 
 class CaptureConflict(APIException):
@@ -40,36 +36,22 @@ class CaptureService:
         if existing is not None:
             return self._same_owner(existing, user), False
 
-        text = data.get("text", "")
-        has_text = "text" in data
         try:
             with transaction.atomic():
                 capture = Capture.objects.create(
                     id=data["id"],
                     user=user,
                     source=data["source"],
-                    status=Capture.Status.READY if has_text else Capture.Status.WAITING_FILE,
-                    original_text=text,
-                    text=text,
+                    status=Capture.Status.READY,
+                    original_text=data["text"],
+                    text=data["text"],
                     captured_at=data["captured_at"],
-                    processed_at=timezone.now() if has_text else None,
+                    processed_at=timezone.now(),
                 )
         except IntegrityError:
             return self._same_owner(Capture.objects.get(pk=data["id"]), user), False
 
         return capture, True
-
-    def receive_file(self, capture: Capture, file) -> Capture:
-        if capture.status not in RECEIVES_FILE:
-            raise CaptureConflict("Essa captura já foi processada.")
-
-        save_upload(capture.id, file)
-        capture.status = Capture.Status.PROCESSING
-        capture.error = ""
-        capture.save(update_fields=["status", "error", "updated_at"])
-        transaction.on_commit(lambda: enqueue_processing(capture.id))
-
-        return capture
 
     def update(self, capture: Capture, data: dict) -> Capture:
         if capture.status != Capture.Status.READY:
@@ -98,8 +80,6 @@ class CaptureService:
     def confirm(self, capture: Capture) -> Capture:
         if capture.status == Capture.Status.ANALYZED:
             return capture
-        if capture.status != Capture.Status.READY:
-            raise CaptureConflict("Essa captura ainda não está pronta.")
         if not capture.terms.exists():
             raise serializers.ValidationError({"terms": ["Escolha pelo menos um termo."]})
 
@@ -113,7 +93,6 @@ class CaptureService:
         if capture.discarded_at is not None:
             return
 
-        delete_upload(capture.id)
         capture.discarded_at = timezone.now()
         capture.save(update_fields=["discarded_at", "updated_at"])
 

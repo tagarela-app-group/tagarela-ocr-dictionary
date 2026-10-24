@@ -6,10 +6,8 @@ from django.utils import timezone
 from rest_framework.test import APITestCase
 
 from apps.captures.models import Capture, CaptureTerm
-from apps.captures.tests.helpers import TEXT, UploadDirMixin, make_capture, make_user
+from apps.captures.tests.helpers import TEXT, make_capture, make_user
 from apps.captures.views import CapturePagination
-from apps.ocr.tests.images import uploaded_image
-from apps.transcription.tests.audio import uploaded_audio
 
 URL = "/api/v1/captures"
 CAPTURED_AT = "2026-10-23T10:00:00-03:00"
@@ -18,7 +16,7 @@ MIND = {"text": "mind", "start": 7, "end": 11}
 TRAIN = {"text": "train", "start": 32, "end": 37}
 
 
-class CaptureApiTestCase(UploadDirMixin, APITestCase):
+class CaptureApiTestCase(APITestCase):
     def setUp(self):
         super().setUp()
         self.user = make_user()
@@ -51,14 +49,6 @@ class CreateCaptureTests(CaptureApiTestCase):
         self.assertIsNotNone(body["processed_at"])
         self.assertEqual(Capture.objects.get().user, self.user)
 
-    def test_photo_capture_waits_for_the_file(self):
-        payload = {"id": str(uuid.uuid4()), "source": "photo", "captured_at": CAPTURED_AT}
-        response = self.client.post(URL, payload, format="json")
-
-        self.assertEqual(response.status_code, 201)
-        self.assertEqual(response.json()["status"], "waiting_file")
-        self.assertEqual(response.json()["text"], "")
-
     def test_same_id_again_returns_the_existing_capture(self):
         capture_id = str(uuid.uuid4())
         self.create(id=capture_id)
@@ -77,13 +67,17 @@ class CreateCaptureTests(CaptureApiTestCase):
         self.assertEqual(response.status_code, 409)
         self.assertEqual(response.json(), {"detail": "Esse id já está em uso."})
 
-    def test_text_capture_without_text_returns_400(self):
-        payload = {"id": str(uuid.uuid4()), "source": "text", "captured_at": CAPTURED_AT}
+    def test_any_source_without_text_returns_400(self):
+        for source in ("text", "photo", "audio"):
+            with self.subTest(source=source):
+                payload = {"id": str(uuid.uuid4()), "source": source, "captured_at": CAPTURED_AT}
 
-        response = self.client.post(URL, payload, format="json")
+                response = self.client.post(URL, payload, format="json")
 
-        self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.json(), {"text": ["Escreva o texto da captura."]})
+                self.assertEqual(response.status_code, 400)
+                self.assertEqual(response.json(), {"text": ["Escreva o texto da captura."]})
+
+        self.assertFalse(Capture.objects.exists())
 
     def test_photo_and_audio_with_text_from_the_app_are_born_ready(self):
         for source in ("photo", "audio"):
@@ -254,8 +248,8 @@ class DetailCaptureTests(CaptureApiTestCase):
                 response = self.client.patch(self.url(capture), body, format="json")
                 self.assertEqual(response.status_code, 400)
 
-    def test_patch_when_not_ready_returns_409(self):
-        capture = make_capture(self.user, status=Capture.Status.PROCESSING)
+    def test_patch_when_analyzed_returns_409(self):
+        capture = make_capture(self.user, status=Capture.Status.ANALYZED)
 
         response = self.client.patch(self.url(capture), {"terms": [MIND]}, format="json")
 
@@ -282,92 +276,6 @@ class DetailCaptureTests(CaptureApiTestCase):
         self.assertIsNone(other.discarded_at)
 
 
-@patch("apps.captures.services.enqueue_processing")
-class FileCaptureTests(CaptureApiTestCase):
-    def put_file(self, capture: Capture, file=None):
-        return self.client.put(
-            self.url(capture, "/file"), {"file": file or uploaded_image()}, format="multipart"
-        )
-
-    def test_photo_file_is_saved_and_queued(self, enqueue):
-        capture = make_capture(
-            self.user, source=Capture.Source.PHOTO, status=Capture.Status.WAITING_FILE, text=""
-        )
-
-        with self.captureOnCommitCallbacks(execute=True):
-            response = self.put_file(capture)
-
-        self.assertEqual(response.status_code, 202)
-        self.assertEqual(response.json()["status"], "processing")
-        self.assertEqual([path.name for path in self.upload_dir.iterdir()], [f"{capture.id}.png"])
-        enqueue.assert_called_once_with(capture.id)
-
-    def test_audio_file_is_saved_and_queued(self, enqueue):
-        capture = make_capture(
-            self.user, source=Capture.Source.AUDIO, status=Capture.Status.WAITING_FILE, text=""
-        )
-
-        with self.captureOnCommitCallbacks(execute=True):
-            response = self.put_file(capture, uploaded_audio())
-
-        self.assertEqual(response.status_code, 202)
-        self.assertEqual(response.json()["status"], "processing")
-        self.assertEqual([path.name for path in self.upload_dir.iterdir()], [f"{capture.id}.m4a"])
-        enqueue.assert_called_once_with(capture.id)
-
-    def test_failed_photo_can_be_sent_again(self, enqueue):
-        capture = make_capture(
-            self.user,
-            source=Capture.Source.PHOTO,
-            status=Capture.Status.FAILED,
-            error=Capture.Error.PROCESSING_FAILED,
-            text="",
-        )
-
-        response = self.put_file(capture)
-
-        self.assertEqual(response.status_code, 202)
-        self.assertEqual(response.json()["status"], "processing")
-        self.assertEqual(response.json()["error"], "")
-
-    def test_processed_capture_returns_409(self, enqueue):
-        capture = make_capture(self.user, source=Capture.Source.PHOTO)
-
-        response = self.put_file(capture)
-
-        self.assertEqual(response.status_code, 409)
-        enqueue.assert_not_called()
-
-    def test_wrong_files_return_400(self, enqueue):
-        cases = [
-            (Capture.Source.TEXT, uploaded_image(), "Captura de texto não recebe arquivo."),
-            (
-                Capture.Source.AUDIO,
-                uploaded_image(),
-                "Formato inválido. Envie um áudio M4A (AAC).",
-            ),
-            (
-                Capture.Source.PHOTO,
-                uploaded_audio(),
-                "Formato inválido. Envie uma imagem JPEG, PNG ou WEBP.",
-            ),
-            (
-                Capture.Source.PHOTO,
-                uploaded_image("GIF", "image/gif", "foto.gif"),
-                "Formato inválido. Envie uma imagem JPEG, PNG ou WEBP.",
-            ),
-        ]
-
-        for source, file, message in cases:
-            with self.subTest(source=source):
-                capture = make_capture(self.user, source=source, status="waiting_file", text="")
-                response = self.put_file(capture, file)
-                self.assertEqual(response.status_code, 400)
-                self.assertEqual(response.json(), {"file": [message]})
-
-        enqueue.assert_not_called()
-
-
 class ConfirmCaptureTests(CaptureApiTestCase):
     def test_ready_capture_with_terms_becomes_analyzed(self):
         capture = make_capture(self.user)
@@ -389,10 +297,3 @@ class ConfirmCaptureTests(CaptureApiTestCase):
 
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json(), {"terms": ["Escolha pelo menos um termo."]})
-
-    def test_not_ready_returns_409(self):
-        capture = make_capture(self.user, status=Capture.Status.PROCESSING)
-
-        response = self.client.post(self.url(capture, "/confirm"))
-
-        self.assertEqual(response.status_code, 409)

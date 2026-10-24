@@ -3,8 +3,6 @@ from rest_framework import serializers
 
 from apps.captures.models import Capture, CaptureTerm
 from apps.common.serializers import StrictSerializer
-from apps.ocr.validators import validate_uploaded_image
-from apps.transcription.validators import validate_uploaded_audio
 
 
 class CaptureListParamsSerializer(StrictSerializer):
@@ -16,28 +14,10 @@ class CaptureCreateSerializer(StrictSerializer):
     id = serializers.UUIDField()
     source = serializers.ChoiceField(choices=Capture.Source.choices)
     captured_at = serializers.DateTimeField()
-    text = serializers.CharField(required=False, max_length=settings.CAPTURE_MAX_TEXT_LENGTH)
-
-    def validate(self, attrs):
-        if attrs["source"] == Capture.Source.TEXT and "text" not in attrs:
-            raise serializers.ValidationError({"text": ["Escreva o texto da captura."]})
-
-        return attrs
-
-
-class CaptureFileSerializer(StrictSerializer):
-    file = serializers.FileField()
-
-    def validate_file(self, file):
-        source = self.context["capture"].source
-        if source == Capture.Source.TEXT:
-            raise serializers.ValidationError("Captura de texto não recebe arquivo.")
-        if source == Capture.Source.AUDIO:
-            validate_uploaded_audio(file)
-        else:
-            validate_uploaded_image(file)
-
-        return file
+    text = serializers.CharField(
+        max_length=settings.CAPTURE_MAX_TEXT_LENGTH,
+        error_messages={"required": "Escreva o texto da captura."},
+    )
 
 
 class TermSerializer(StrictSerializer):
@@ -97,7 +77,6 @@ class CaptureSerializer(serializers.ModelSerializer):
             "text",
             "original_text",
             "terms",
-            "error",
             "captured_at",
             "processed_at",
             "analyzed_at",
