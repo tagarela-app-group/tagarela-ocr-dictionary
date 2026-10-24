@@ -8,6 +8,8 @@ from rest_framework.test import APITestCase
 from apps.captures.models import Capture, CaptureTerm
 from apps.captures.tests.helpers import TEXT, make_capture, make_user
 from apps.captures.views import CapturePagination
+from apps.vocabulary.models import Term
+from apps.vocabulary.tests.helpers import make_group, make_term
 
 URL = "/api/v1/captures"
 CAPTURED_AT = "2026-10-23T10:00:00-03:00"
@@ -290,6 +292,19 @@ class ConfirmCaptureTests(CaptureApiTestCase):
         again = self.client.post(self.url(capture, "/confirm"))
         self.assertEqual(again.status_code, 200)
 
+    def test_confirmed_terms_enter_the_vocabulary_without_repeating(self):
+        travel = make_group(self.user)
+        make_term(self.user, "Train", travel)
+        capture = make_capture(self.user)
+        for term in (MIND_THE_GAP, MIND, TRAIN):
+            CaptureTerm.objects.create(capture=capture, **term)
+
+        self.client.post(self.url(capture, "/confirm"))
+        self.client.post(self.url(capture, "/confirm"))
+
+        terms = {t.text: t.group for t in Term.objects.filter(user=self.user)}
+        self.assertEqual(terms, {"mind the gap": None, "mind": None, "Train": travel})
+
     def test_without_terms_returns_400(self):
         capture = make_capture(self.user)
 
@@ -297,3 +312,4 @@ class ConfirmCaptureTests(CaptureApiTestCase):
 
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json(), {"terms": ["Escolha pelo menos um termo."]})
+        self.assertFalse(Term.objects.exists())

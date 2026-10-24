@@ -27,6 +27,7 @@ INSTALLED_APPS = [
     "allauth.socialaccount.providers.apple",
     "allauth.headless",
     "apps.captures",
+    "apps.vocabulary",
 ]
 
 MIDDLEWARE = [
@@ -130,6 +131,8 @@ CAPTURE_MAX_TEXT_LENGTH = int(os.environ.get("CAPTURE_MAX_TEXT_LENGTH", "2000"))
 CAPTURE_MAX_TERMS = int(os.environ.get("CAPTURE_MAX_TERMS", "50"))
 CAPTURE_MAX_TERM_LENGTH = int(os.environ.get("CAPTURE_MAX_TERM_LENGTH", "100"))
 CAPTURE_PAGE_SIZE = int(os.environ.get("CAPTURE_PAGE_SIZE", "50"))
+
+VOCABULARY_GROUP_NAME_MAX_LENGTH = int(os.environ.get("VOCABULARY_GROUP_NAME_MAX_LENGTH", "30"))
 
 REST_FRAMEWORK = {
     "DEFAULT_RENDERER_CLASSES": [
