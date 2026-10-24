@@ -26,10 +26,7 @@ INSTALLED_APPS = [
     "allauth.socialaccount.providers.google",
     "allauth.socialaccount.providers.apple",
     "allauth.headless",
-    "apps.ocr",
-    "apps.lexical",
     "apps.captures",
-    "apps.transcription",
 ]
 
 MIDDLEWARE = [
@@ -129,58 +126,10 @@ EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
 EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS", "True").lower() in {"1", "true", "yes", "on"}
 DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "Tagarela <nao-responda@localhost>")
 
-REDIS_URL = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
-
-CELERY_BROKER_URL = os.environ.get("CELERY_BROKER_URL", REDIS_URL)
-CELERY_WORKER_CONCURRENCY = int(os.environ.get("CELERY_WORKER_CONCURRENCY", "1"))
-CELERY_WORKER_PREFETCH_MULTIPLIER = 1
-CELERY_TASK_ACKS_LATE = True
-CELERY_TASK_REJECT_ON_WORKER_LOST = True
-CELERY_TASK_IGNORE_RESULT = True
-CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
-
-CAPTURE_UPLOAD_DIR = Path(os.environ.get("CAPTURE_UPLOAD_DIR", "/tmp/tagarela/captures"))
 CAPTURE_MAX_TEXT_LENGTH = int(os.environ.get("CAPTURE_MAX_TEXT_LENGTH", "2000"))
 CAPTURE_MAX_TERMS = int(os.environ.get("CAPTURE_MAX_TERMS", "50"))
 CAPTURE_MAX_TERM_LENGTH = int(os.environ.get("CAPTURE_MAX_TERM_LENGTH", "100"))
 CAPTURE_PAGE_SIZE = int(os.environ.get("CAPTURE_PAGE_SIZE", "50"))
-CAPTURE_PROCESS_MAX_RETRIES = int(os.environ.get("CAPTURE_PROCESS_MAX_RETRIES", "3"))
-CAPTURE_PROCESS_RETRY_SECONDS = int(os.environ.get("CAPTURE_PROCESS_RETRY_SECONDS", "30"))
-
-OCR_MAX_IMAGE_SIZE_BYTES = int(os.environ.get("OCR_MAX_IMAGE_SIZE_BYTES", str(10 * 1024 * 1024)))
-OCR_ALLOWED_CONTENT_TYPES = {
-    "image/jpeg",
-    "image/png",
-    "image/webp",
-}
-OCR_ALLOWED_FORMATS = {
-    "JPEG",
-    "PNG",
-    "WEBP",
-}
-
-TRANSCRIPTION_MODEL = os.environ.get("TRANSCRIPTION_MODEL", "base.en")
-TRANSCRIPTION_MODEL_DIR = Path(os.environ.get("TRANSCRIPTION_MODEL_DIR", "/tmp/tagarela/whisper"))
-TRANSCRIPTION_COMPUTE_TYPE = os.environ.get("TRANSCRIPTION_COMPUTE_TYPE", "int8")
-TRANSCRIPTION_CPU_THREADS = int(os.environ.get("TRANSCRIPTION_CPU_THREADS", "2"))
-TRANSCRIPTION_BEAM_SIZE = int(os.environ.get("TRANSCRIPTION_BEAM_SIZE", "5"))
-TRANSCRIPTION_MAX_AUDIO_SIZE_BYTES = int(
-    os.environ.get("TRANSCRIPTION_MAX_AUDIO_SIZE_BYTES", str(5 * 1024 * 1024))
-)
-TRANSCRIPTION_MAX_AUDIO_SECONDS = int(os.environ.get("TRANSCRIPTION_MAX_AUDIO_SECONDS", "60"))
-TRANSCRIPTION_ALLOWED_CONTENT_TYPES = {
-    "audio/mp4",
-    "audio/m4a",
-    "audio/x-m4a",
-}
-
-LEXICAL_LANGUAGE = os.environ.get("LEXICAL_LANGUAGE", "en")
-LEXICAL_CACHE_TTL_SECONDS = int(os.environ.get("LEXICAL_CACHE_TTL_SECONDS", str(24 * 60 * 60)))
-DICTIONARY_API_BASE_URL = os.environ.get(
-    "DICTIONARY_API_BASE_URL",
-    "https://api.dictionaryapi.dev/api/v2/entries",
-)
-DICTIONARY_API_TIMEOUT_SECONDS = float(os.environ.get("DICTIONARY_API_TIMEOUT_SECONDS", "5"))
 
 REST_FRAMEWORK = {
     "DEFAULT_RENDERER_CLASSES": [

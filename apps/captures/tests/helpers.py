@@ -1,25 +1,11 @@
-import tempfile
 import uuid
-from pathlib import Path
 
 from django.contrib.auth import get_user_model
-from django.test import override_settings
 from django.utils import timezone
 
 from apps.captures.models import Capture
 
 TEXT = "Please mind the gap between the train and the platform."
-
-
-class UploadDirMixin:
-    def setUp(self):
-        super().setUp()
-        temp = tempfile.TemporaryDirectory()
-        self.addCleanup(temp.cleanup)
-        self.upload_dir = Path(temp.name)
-        override = override_settings(CAPTURE_UPLOAD_DIR=self.upload_dir)
-        override.enable()
-        self.addCleanup(override.disable)
 
 
 def make_user(email: str = "ana@example.com"):

@@ -9,16 +9,8 @@ class Capture(models.Model):
         PHOTO = "photo", "Foto"
 
     class Status(models.TextChoices):
-        WAITING_FILE = "waiting_file", "Esperando arquivo"
-        PROCESSING = "processing", "Processando"
-        FAILED = "failed", "Falhou"
         READY = "ready", "Pronta"
         ANALYZED = "analyzed", "Analisada"
-
-    class Error(models.TextChoices):
-        NO_TEXT = "no_text", "Sem texto"
-        FILE_MISSING = "file_missing", "Arquivo sumiu"
-        PROCESSING_FAILED = "processing_failed", "Falha no processamento"
 
     id = models.UUIDField(primary_key=True)
     user = models.ForeignKey(
@@ -28,7 +20,6 @@ class Capture(models.Model):
     status = models.CharField(max_length=20, choices=Status.choices)
     original_text = models.TextField(blank=True)
     text = models.TextField(blank=True)
-    error = models.CharField(max_length=30, choices=Error.choices, blank=True)
     captured_at = models.DateTimeField()
     processed_at = models.DateTimeField(null=True, blank=True)
     analyzed_at = models.DateTimeField(null=True, blank=True)

@@ -1,6 +1,6 @@
 from apps.accounts.tests.test_auth_flows import PASSWORD, AuthFlowTestCase
 
-PROTECTED = "/api/v1/images/analyze"
+PROTECTED = "/api/v1/captures"
 
 
 class ApiRouteAuthTests(AuthFlowTestCase):
@@ -12,7 +12,7 @@ class ApiRouteAuthTests(AuthFlowTestCase):
 
     def call(self, authorization: str | None = None):
         headers = {"Authorization": authorization} if authorization else {}
-        return self.client.post(PROTECTED, {}, headers=headers)
+        return self.client.get(PROTECTED, headers=headers)
 
     def test_without_token_returns_401(self):
         response = self.call()
@@ -28,5 +28,5 @@ class ApiRouteAuthTests(AuthFlowTestCase):
     def test_login_access_token_reaches_the_view(self):
         response = self.call(f"Bearer {self.access_token()}")
 
-        self.assertEqual(response.status_code, 400)
-        self.assertIn("file", response.json())
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["results"], [])

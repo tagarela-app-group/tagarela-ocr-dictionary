@@ -1,6 +1,6 @@
 # CLAUDE.md — Tagarela API
 
-Backend Django REST do Tagarela: captura (texto, foto, áudio) → texto → termos; foto → OCR → palavras com definição. Este arquivo: regras gerais + mapa dos docs.
+Backend Django REST do Tagarela: conta + captura (texto digitado, ou extraído da foto e do áudio no celular) → termos. Este arquivo: regras gerais + mapa dos docs.
 
 ## Docs
 
@@ -18,8 +18,8 @@ App cliente (Flutter): repo `tagarela-app-group/tagarela`.
 1. Início de chat novo: ativar skill `caveman` (nível `full`).
 2. Cada coisa no seu lugar. Conteúdo novo vai no doc do assunto. Doc não repete outro doc.
 3. Docs: só o necessário. Objetivo, estilo caveman, sem perder informação.
-4. View fina: serializer valida → service faz → `Response`. Task do Celery também fina: chama service. Regra de negócio só em service. Toda entrada (body e query) passa por serializer que herda `StrictSerializer`: campo desconhecido = 400.
-5. Lib ou serviço externo (PaddleOCR, dicionário, Whisper, Redis como cache) só dentro de `providers/` ou `cache.py`. Resto do código não importa direto. Framework de infraestrutura tem lugar fixo: allauth só em `apps/accounts/` e `config/` (settings, urls); Celery só em `config/celery.py` e `apps/<app>/tasks.py` (service enfileira chamando função do `tasks.py`).
+4. View fina: serializer valida → service faz → `Response`. Regra de negócio só em service. Toda entrada (body e query) passa por serializer que herda `StrictSerializer`: campo desconhecido = 400.
+5. Lib ou serviço externo só dentro de `providers/`. Resto do código não importa direto. Framework de infraestrutura tem lugar fixo: allauth só em `apps/accounts/` e `config/` (settings, urls).
 6. Limite, URL, TTL, idioma: sempre setting (env → `config/settings.py` → `.env.example`). Nunca valor solto no código. Segredo só no `.env` (fora do git).
 7. Contrato `/api/v1` é público (app consome). Não quebrar. Mudança incompatível: avisar usuário + nova versão.
 8. Model mudou: migration junto (`makemigrations`). Nunca editar migration já mergeada.
