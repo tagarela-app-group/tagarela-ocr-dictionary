@@ -19,13 +19,8 @@ class CaptureCreateSerializer(StrictSerializer):
     text = serializers.CharField(required=False, max_length=settings.CAPTURE_MAX_TEXT_LENGTH)
 
     def validate(self, attrs):
-        is_text = attrs["source"] == Capture.Source.TEXT
-        if is_text and "text" not in attrs:
+        if attrs["source"] == Capture.Source.TEXT and "text" not in attrs:
             raise serializers.ValidationError({"text": ["Escreva o texto da captura."]})
-        if not is_text and "text" in attrs:
-            raise serializers.ValidationError(
-                {"text": ["Foto e áudio não levam texto. Envie o arquivo."]}
-            )
 
         return attrs
 

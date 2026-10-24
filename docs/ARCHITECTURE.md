@@ -95,7 +95,9 @@ requirements-dev.txt       ruff, coverage, pip-audit (fora da imagem)
 
 `analyze_image` (view) → `ImageAnalyzeSerializer` (valida) → `ImageAnalysisService.analyze` → `PaddleOCRProvider.extract_text` → `LexicalLookupService.analyze_text` → resposta.
 
-Captura de foto ou áudio: app cria (`POST captures`, `waiting_file`) → manda o arquivo (`PUT captures/{id}/file`, 202) → `save_upload` grava em `CAPTURE_UPLOAD_DIR` → `processing` → `enqueue_processing` (após commit) → worker `process_capture` → `CaptureProcessingService.process` → `TextExtractionService.extract` (foto) ou `TranscriptionService.transcribe` (áudio) → `ready` com o texto, arquivo apagado. Texto digitado já nasce `ready`. Depois: app salva texto editado e termos (`PATCH`) → confirma (`POST confirm`, `analyzed`).
+Captura de foto ou áudio, texto extraído no celular (padrão do app): app cria com o texto (`POST captures` com `text`) → `ready`. Arquivo não sobe.
+
+Captura de foto ou áudio, texto extraído no servidor (app em `EXTRACTION=server`, pra comparar): app cria sem texto (`POST captures`, `waiting_file`) → manda o arquivo (`PUT captures/{id}/file`, 202) → `save_upload` grava em `CAPTURE_UPLOAD_DIR` → `processing` → `enqueue_processing` (após commit) → worker `process_capture` → `CaptureProcessingService.process` → `TextExtractionService.extract` (foto) ou `TranscriptionService.transcribe` (áudio) → `ready` com o texto, arquivo apagado. Texto digitado já nasce `ready`. Depois: app salva texto editado e termos (`PATCH`) → confirma (`POST confirm`, `analyzed`).
 
 Lookup, em lote:
 
@@ -141,7 +143,7 @@ Medição (`benchmark_transcription`, 2026-10-23): Docker Desktop no PC de dev (
 ## Captura (`captures`)
 
 - Rascunho do que a pessoa capturou. Offline first: nasce no celular, o app sincroniza quando tiver internet. `id` = UUID gerado no app: mesmo `id` de novo = 200 com o que já existe (envio repetido não duplica). `id` de outro usuário = 409.
-- Status: `waiting_file` (foto/áudio sem arquivo) → `processing` → `ready` | `failed` → `analyzed` (confirmou a análise). Texto digitado nasce `ready`.
+- Status: `waiting_file` (foto/áudio sem arquivo) → `processing` → `ready` | `failed` → `analyzed` (confirmou a análise). Texto digitado ou extraído no celular (`text` no `POST`) nasce `ready`.
 - Arquivo: só temporário. Foto e áudio ficam no celular; a API guarda só o texto. Apagado depois de extrair, depois da última tentativa e ao descartar. Reenviar (`PUT file`) vale em `waiting_file`, `processing` e `failed` (é o "Processar agora" do app). Já processada: 409.
 - Processamento: task `process_capture`. Erro na extração: nova tentativa com espera `CAPTURE_PROCESS_RETRY_SECONDS × 2^tentativa`, até `CAPTURE_PROCESS_MAX_RETRIES`. Última falhou: `failed` + `error`. Códigos: `no_text` (extraiu nada), `file_missing` (arquivo sumiu da pasta), `processing_failed` (extração quebrou em todas as tentativas).
 - Texto e termos: `text` = atual (editável), `original_text` = o que veio do OCR/transcrição/digitação. Termo = trecho do texto (`text`, `start`, `end` em caracteres). Palavra e expressão que a contém coexistem ("mind" e "mind the gap"). `PATCH` com `terms` troca a lista toda; só `text` mantém os termos que ainda batem no mesmo lugar. Edita só em `ready`.
@@ -226,7 +228,7 @@ Captura (`/api/v1/captures`). Erro de validação: 400 `{"campo": ["<mensagem pt
 
 | Rota | Corpo | Resposta |
 | --- | --- | --- |
-| `POST /api/v1/captures` | JSON `{id, source, captured_at, text?}`. `text` só (e obrigatório) em `source: text`, até `CAPTURE_MAX_TEXT_LENGTH` | 201 nova, 200 já existia, 409 `id` de outro usuário |
+| `POST /api/v1/captures` | JSON `{id, source, captured_at, text?}`. `text` até `CAPTURE_MAX_TEXT_LENGTH`: obrigatório em `source: text`; em foto/áudio = texto extraído no celular (nasce `ready`), sem ele espera o arquivo (`waiting_file`) | 201 nova, 200 já existia, 409 `id` de outro usuário |
 | `GET /api/v1/captures` | query `updated_since?` (ISO 8601), `cursor?` | 200 `{next, previous, results}`. Mais recente (`updated_at`) primeiro, `CAPTURE_PAGE_SIZE` por página. Sem `updated_since`: sem as descartadas. Com: tudo que mudou desde então, descartadas incluídas |
 | `GET /api/v1/captures/{id}` | | 200 |
 | `PATCH /api/v1/captures/{id}` | JSON `{text?, terms?: [{text, start, end}]}`, ao menos um. Até `CAPTURE_MAX_TERMS` termos de até `CAPTURE_MAX_TERM_LENGTH` | 200. 400 termo que não bate com o texto ou repetido. 409 fora de `ready` |

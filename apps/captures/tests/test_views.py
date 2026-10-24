@@ -85,8 +85,20 @@ class CreateCaptureTests(CaptureApiTestCase):
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json(), {"text": ["Escreva o texto da captura."]})
 
-    def test_photo_with_text_returns_400(self):
-        response = self.create(source="photo")
+    def test_photo_and_audio_with_text_from_the_app_are_born_ready(self):
+        for source in ("photo", "audio"):
+            with self.subTest(source=source):
+                response = self.create(source=source)
+
+                self.assertEqual(response.status_code, 201)
+                body = response.json()
+                self.assertEqual(body["status"], "ready")
+                self.assertEqual(body["text"], TEXT)
+                self.assertEqual(body["original_text"], TEXT)
+                self.assertIsNotNone(body["processed_at"])
+
+    def test_photo_with_blank_text_returns_400(self):
+        response = self.create(source="photo", text="")
 
         self.assertEqual(response.status_code, 400)
         self.assertIn("text", response.json())
