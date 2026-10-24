@@ -41,18 +41,18 @@ class CaptureService:
             return self._same_owner(existing, user), False
 
         text = data.get("text", "")
-        is_text = data["source"] == Capture.Source.TEXT
+        has_text = "text" in data
         try:
             with transaction.atomic():
                 capture = Capture.objects.create(
                     id=data["id"],
                     user=user,
                     source=data["source"],
-                    status=Capture.Status.READY if is_text else Capture.Status.WAITING_FILE,
+                    status=Capture.Status.READY if has_text else Capture.Status.WAITING_FILE,
                     original_text=text,
                     text=text,
                     captured_at=data["captured_at"],
-                    processed_at=timezone.now() if is_text else None,
+                    processed_at=timezone.now() if has_text else None,
                 )
         except IntegrityError:
             return self._same_owner(Capture.objects.get(pk=data["id"]), user), False

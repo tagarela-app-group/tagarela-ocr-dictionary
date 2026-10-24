@@ -14,7 +14,7 @@ Foto → texto (OCR) → palavras com significado. Reaproveita resultado já con
 - **Definição**: texto do dicionário externo, inglês → inglês. Sem tradução.
 - **Fonte** (`source`): de onde veio a palavra na resposta. `cache`, `database` ou `dictionary`.
 - **Idioma**: fixo por env (`LEXICAL_LANGUAGE`, padrão `en`).
-- **Captura**: rascunho do que a pessoa guardou no dia (texto digitado, foto ou áudio). Foto e áudio ficam no celular; a API guarda só o texto extraído. A pessoa escolhe os termos (palavra ou expressão) dentro do texto, pode corrigir o texto e confirma a análise.
+- **Captura**: rascunho do que a pessoa guardou no dia (texto digitado, foto ou áudio). Foto e áudio ficam no celular; a API guarda só o texto extraído. O app extrai o texto no próprio celular e já manda pronto; extrair no servidor fica pra comparação. A pessoa escolhe os termos (palavra ou expressão) dentro do texto, pode corrigir o texto e confirma a análise.
 - **Conta**: e-mail (único, verificado por código) + nome. Entra por senha, Google ou Apple. Google/Apple com mesmo e-mail = mesma conta.
 
 ## Escopo
