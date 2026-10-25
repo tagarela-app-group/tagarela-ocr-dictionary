@@ -29,6 +29,10 @@ class HeadlessAdapter(DefaultHeadlessAdapter):
         if not user.pk:
             return data
         pictures = (account.get_avatar_url() for account in user.socialaccount_set.all())
-        extra = {"name": user.name, "picture": next((url for url in pictures if url), None)}
+        extra = {
+            "name": user.name,
+            "picture": next((url for url in pictures if url), None),
+            "country": user.country,
+        }
 
         return {**data, **{key: value for key, value in extra.items() if value}}
