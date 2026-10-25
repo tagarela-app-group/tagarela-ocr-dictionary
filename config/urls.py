@@ -9,5 +9,6 @@ urlpatterns = [
     path("api/v1/", include("apps.captures.urls")),
     path("api/v1/", include("apps.vocabulary.urls")),
     path("api/v1/", include("apps.language_analysis.urls")),
+    path("api/v1/", include("apps.accounts.urls")),
     path("api/auth/", include("allauth.headless.urls")),
 ]
