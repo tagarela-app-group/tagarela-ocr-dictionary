@@ -6,6 +6,7 @@ from rest_framework import serializers
 
 LANGUAGE_CODE_PATTERN = re.compile(r"^[a-z]{2,3}(?:-[A-Za-z]{2,4})?$")
 CEFR_LEVELS = ("A1", "A2", "B1", "B2", "C1", "C2")
+FORMALITY_LEVELS = ("slang", "informal", "neutral", "formal")
 
 
 class LanguageAnalysisStrictSerializer(serializers.Serializer):
@@ -85,6 +86,18 @@ class UsageExampleSerializer(LanguageAnalysisStrictSerializer):
     usage_context = serializers.CharField(allow_blank=False)
 
 
+class UsageContextSerializer(LanguageAnalysisStrictSerializer):
+    context = serializers.CharField(allow_blank=False)
+    fits = serializers.BooleanField()
+    alternative = serializers.CharField(allow_null=True, allow_blank=False)
+
+
+def word_list(max_length: int) -> serializers.ListField:
+    return serializers.ListField(
+        child=serializers.CharField(allow_blank=False), max_length=max_length, allow_empty=True
+    )
+
+
 class LinguisticAnalysisSerializer(LanguageAnalysisStrictSerializer):
     focus = serializers.CharField(allow_blank=False)
     detected_language = serializers.CharField(allow_blank=False)
@@ -95,9 +108,18 @@ class LinguisticAnalysisSerializer(LanguageAnalysisStrictSerializer):
     is_ambiguous = serializers.BooleanField()
     alternative_meanings = AlternativeMeaningSerializer(many=True, max_length=3)
     examples = UsageExampleSerializer(many=True, max_length=3)
-    usage_notes = serializers.ListField(
-        child=serializers.CharField(allow_blank=False), max_length=5, allow_empty=True
-    )
+    usage_notes = word_list(5)
+    phonetic = serializers.CharField(allow_null=True, allow_blank=False)
+    source_definition = serializers.CharField(allow_null=True, allow_blank=False)
+    source_meaning_in_context = serializers.CharField(allow_null=True, allow_blank=False)
+    source_explanation = serializers.CharField(allow_blank=False)
+    pitfall = serializers.CharField(allow_null=True, allow_blank=False)
+    collocations = word_list(6)
+    synonyms = word_list(5)
+    antonyms = word_list(5)
+    formality = serializers.ChoiceField(choices=FORMALITY_LEVELS)
+    formality_note = serializers.CharField(allow_null=True, allow_blank=False)
+    contexts = UsageContextSerializer(many=True, max_length=4)
 
 
 class LanguageAnalysisMetadataSerializer(LanguageAnalysisStrictSerializer):

@@ -1,6 +1,6 @@
 # Language analysis
 
-`language_analysis` provides a stateless Gemini-backed analysis for a word, phrase, or short text. It does not create database records or caches.
+`language_analysis` provides a stateless Gemini-backed analysis for a word, phrase, or short text. It does not create database records or caches. The term card (`apps/cards`, `GET /api/v1/terms/<id>`) calls it once per term and saves the result.
 
 ## Configuration
 
@@ -48,14 +48,27 @@ GEMINI_TIMEOUT=30
     "is_ambiguous": false,
     "alternative_meanings": [],
     "examples": [],
-    "usage_notes": []
+    "usage_notes": [],
+    "phonetic": "/rʌn/",
+    "source_definition": "to manage or operate",
+    "source_meaning_in_context": "To manage a small business.",
+    "source_explanation": "Run is often used for being in charge of a company.",
+    "pitfall": "Não traduza como correr quando o assunto é uma empresa.",
+    "collocations": ["run a business"],
+    "synonyms": ["manage", "operate"],
+    "antonyms": [],
+    "formality": "neutral",
+    "formality_note": "Serve em conversa e no trabalho.",
+    "contexts": [{"context": "Contrato", "fits": false, "alternative": "operate"}]
   },
   "metadata": {
     "model": "gemini-3.5-flash-lite",
-    "prompt_version": "1.0"
+    "prompt_version": "2.0"
   }
 }
 ```
+
+Prompt 2.0 added the fields after `usage_notes`. `source_*`, `phonetic`, `collocations`, `synonyms`, `antonyms` and `contexts[].alternative` are in the source language; `pitfall`, `formality_note` and `contexts[].context` are in the target language. `formality` is one of `slang`, `informal`, `neutral`, `formal`.
 
 Provider configuration or availability failures return `503`; timeouts return `504`; invalid provider output returns `502`. Request-validation failures return `400`.
 
@@ -65,4 +78,4 @@ Run the standard Django test suite with `python manage.py test`. Gemini calls ar
 
 ## Known limitations and future work
 
-The MVP has no persistence, cache, history, exercises, learning-progress tracking, or prompt-quality evaluation. Those features remain separate future phases.
+The endpoint has no persistence, cache, history, exercises, learning-progress tracking, or prompt-quality evaluation. Only the term card saves results.
