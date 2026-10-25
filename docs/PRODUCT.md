@@ -15,5 +15,5 @@ Guarda a conta, as capturas (só texto: foto e áudio ficam no celular) e o voca
 
 ## Escopo
 
-- Feito: conta (cadastro, login, esqueci a senha, Google, Apple), captura (criar, editar, confirmar, descartar, sincronizar), vocabulário (termo entra ao confirmar, criar grupo, mover).
-- Falta (o app espera): ficha do termo via IA (tradução, fonética, exemplo), SRS, palavra do dia, editar e apagar grupo.
+- Feito: conta (cadastro, login, esqueci a senha, Google, Apple), captura (criar, editar, confirmar, descartar, sincronizar), vocabulário (termo entra ao confirmar, criar, editar e apagar grupo, mover e apagar termo).
+- Falta (o app espera): ficha do termo via IA (tradução, fonética, exemplo), SRS, palavra do dia.

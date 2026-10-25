@@ -1,4 +1,5 @@
 from django.test import TestCase
+from django.utils import timezone
 
 from apps.captures.tests.helpers import make_user
 from apps.vocabulary.models import Term
@@ -38,3 +39,12 @@ class AddTermsTests(TestCase):
         VocabularyService().add_terms(self.user, ["jet lag"])
 
         self.assertEqual(self.texts(), ["jet lag"])
+
+    def test_deleted_term_enters_again_as_new(self):
+        make_term(self.user, "jet lag", make_group(self.user), level=3, deleted_at=timezone.now())
+
+        VocabularyService().add_terms(self.user, ["Jet lag"])
+
+        term = Term.objects.get(user=self.user)
+        self.assertEqual((term.text, term.group, term.level), ("Jet lag", None, 0))
+        self.assertIsNone(term.deleted_at)

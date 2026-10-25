@@ -54,8 +54,9 @@ apps/
 - Termo único por pessoa: `key` = espaços juntados + `casefold`. Já existe: não entra (ficam grupo e texto da 1ª vez).
 - Termo nasce sem grupo. Grupo é escolha da pessoa, nunca da IA.
 - Grupo: nome único por pessoa, ignora maiúscula. `icon` = slug do catálogo do app (API não guarda a lista). `accent` = uma das 6 cores.
-- Mover: tudo ou nada. Termo ou grupo de outra pessoa = 400. `group: null` = Sem grupo.
-- Apagar grupo: sem rota ainda. FK `SET_NULL` já solta os termos.
+- Mover e apagar: tudo ou nada. Termo ou grupo de outra pessoa = 400. `group: null` = Sem grupo.
+- Apagar grupo: termos voltam pra Sem grupo (FK `SET_NULL`).
+- Apagar termo: marca `deleted_at` (some de tudo), pro Desfazer do app restaurar. Apagar de novo remove de vez os apagados antes: só o último dá pra desfazer. Termo apagado confirmado de novo: entra como novo.
 
 ## Auth
 
@@ -82,7 +83,11 @@ Contrato público: o app consome. Sem barra final, só JSON. Formato exato: seri
 | `POST /api/v1/captures/{id}/confirm` | 200 `analyzed`. 400 sem termo |
 | `GET /api/v1/vocabulary` | `{groups, ungrouped}` |
 | `POST /api/v1/groups` | `{name, icon, accent}`. 201. 400 nome repetido |
-| `POST /api/v1/terms/move` | `{terms, group}`. 200 com o vocabulário atualizado |
+| `PATCH /api/v1/groups/{id}` | `{name?, icon?, accent?}`. 200 grupo |
+| `DELETE /api/v1/groups/{id}` | 200 vocabulário |
+| `POST /api/v1/terms/move` | `{terms, group}`. 200 vocabulário |
+| `POST /api/v1/terms/delete` | `{terms}`. 200 vocabulário |
+| `POST /api/v1/terms/restore` | `{terms}`, só o último apagado. 200 vocabulário |
 
 ## Comandos
 
