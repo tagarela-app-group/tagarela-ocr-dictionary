@@ -9,8 +9,9 @@ Backend Django REST do Tagarela (app Flutter em `../mob`). Guarda conta, captura
 - Curso: "aprende X por meio de Y" (en, es, pt; X ≠ Y). Conta tem vários, um ativo; mesmo X com outro Y é outro curso. Capturas, termos e grupos vivem no curso. Rotas de estudo usam o curso ativo; conta sem curso ganha inglês por meio do português.
 - Captura: texto que a pessoa revisa, marca termos e confirma; termos confirmados vão pro vocabulário do curso da captura. O app manda o curso em que ela nasceu (offline first).
 - Vocabulário: termo único por curso, organizado em grupos que só a pessoa cria. IA nunca organiza.
-- App já espera e falta: ficha do termo via IA, revisão espaçada, palavra do dia.
+- App já espera e falta: revisão espaçada, palavra do dia, exercícios da ficha.
 - Análise linguística: recebe texto e termo opcional, consulta Gemini sem persistir resultados e devolve uma ficha estruturada.
+- Ficha do termo (`cards`): gerada pela análise na 1ª abertura, com a captura mais recente do termo como contexto e os idiomas do curso; fica salva e não regenera. Enche `Term.translation`. O que a pessoa revelou fica salvo (`revealed`).
 
 ## Regras
 
@@ -29,7 +30,7 @@ Backend Django REST do Tagarela (app Flutter em `../mob`). Guarda conta, captura
 
 ## Arquitetura
 
-- Monólito modular, um app por responsabilidade em `apps/`; Postgres é a verdade. Dependências só descem (`captures` → `vocabulary` → `courses` → `common`).
+- Monólito modular, um app por responsabilidade em `apps/`; Postgres é a verdade. Dependências só descem (`cards` → `captures` → `vocabulary` → `courses` → `common`; `cards` → `language_analysis`).
 - Camadas: view fina (serializer valida, service faz, `Response`), regra de negócio só em service, lib externa só em `providers/`.
 - `language_analysis` usa `GeminiProvider`; o endpoint exige a autenticação padrão e não mantém histórico de interações.
 - Toda entrada passa por serializer estrito (campo desconhecido = 400).

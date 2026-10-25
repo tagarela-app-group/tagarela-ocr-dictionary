@@ -8,6 +8,7 @@ from rest_framework import status
 from rest_framework.exceptions import APIException
 
 from apps.language_analysis.prompts.linguistic_analysis import SYSTEM_PROMPT
+from apps.language_analysis.serializers import FORMALITY_LEVELS
 
 
 class GeminiConfigurationError(APIException):
@@ -48,6 +49,17 @@ ANALYSIS_RESPONSE_SCHEMA = {
         "alternative_meanings",
         "examples",
         "usage_notes",
+        "phonetic",
+        "source_definition",
+        "source_meaning_in_context",
+        "source_explanation",
+        "pitfall",
+        "collocations",
+        "synonyms",
+        "antonyms",
+        "formality",
+        "formality_note",
+        "contexts",
     ],
     "properties": {
         "focus": {"type": "string"},
@@ -87,6 +99,30 @@ ANALYSIS_RESPONSE_SCHEMA = {
             },
         },
         "usage_notes": {"type": "array", "maxItems": 5, "items": {"type": "string"}},
+        "phonetic": {"type": ["string", "null"]},
+        "source_definition": {"type": ["string", "null"]},
+        "source_meaning_in_context": {"type": ["string", "null"]},
+        "source_explanation": {"type": "string"},
+        "pitfall": {"type": ["string", "null"]},
+        "collocations": {"type": "array", "maxItems": 6, "items": {"type": "string"}},
+        "synonyms": {"type": "array", "maxItems": 5, "items": {"type": "string"}},
+        "antonyms": {"type": "array", "maxItems": 5, "items": {"type": "string"}},
+        "formality": {"type": "string", "enum": list(FORMALITY_LEVELS)},
+        "formality_note": {"type": ["string", "null"]},
+        "contexts": {
+            "type": "array",
+            "maxItems": 4,
+            "items": {
+                "type": "object",
+                "additionalProperties": False,
+                "required": ["context", "fits", "alternative"],
+                "properties": {
+                    "context": {"type": "string"},
+                    "fits": {"type": "boolean"},
+                    "alternative": {"type": ["string", "null"]},
+                },
+            },
+        },
     },
 }
 

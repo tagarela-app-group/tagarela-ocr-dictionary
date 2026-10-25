@@ -22,4 +22,18 @@ VALID_ANALYSIS = {
         }
     ],
     "usage_notes": ["The meaning depends on context."],
+    "phonetic": "/rʌn/",
+    "source_definition": "to manage or operate",
+    "source_meaning_in_context": "To manage a small business.",
+    "source_explanation": "Run is often used for being in charge of a company.",
+    "pitfall": "Não traduza como correr quando o assunto é uma empresa.",
+    "collocations": ["run a business", "run the show"],
+    "synonyms": ["manage", "operate"],
+    "antonyms": [],
+    "formality": "neutral",
+    "formality_note": "Serve em conversa e no trabalho.",
+    "contexts": [
+        {"context": "Reunião de trabalho", "fits": True, "alternative": None},
+        {"context": "Contrato", "fits": False, "alternative": "operate"},
+    ],
 }
