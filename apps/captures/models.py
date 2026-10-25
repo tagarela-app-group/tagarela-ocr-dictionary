@@ -1,6 +1,8 @@
 from django.conf import settings
 from django.db import models
 
+from apps.courses.models import Course
+
 
 class Capture(models.Model):
     class Source(models.TextChoices):
@@ -16,6 +18,7 @@ class Capture(models.Model):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="captures"
     )
+    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name="captures")
     source = models.CharField(max_length=10, choices=Source.choices)
     status = models.CharField(max_length=20, choices=Status.choices)
     original_text = models.TextField(blank=True)

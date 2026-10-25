@@ -26,6 +26,7 @@ INSTALLED_APPS = [
     "allauth.socialaccount.providers.google",
     "allauth.socialaccount.providers.apple",
     "allauth.headless",
+    "apps.courses",
     "apps.captures",
     "apps.vocabulary",
     "apps.language_analysis",

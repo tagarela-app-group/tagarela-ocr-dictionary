@@ -4,6 +4,8 @@ from django.conf import settings
 from django.db import models
 from django.db.models.functions import Lower
 
+from apps.courses.models import Course
+
 
 class Group(models.Model):
     class Accent(models.TextChoices):
@@ -24,6 +26,7 @@ class Group(models.Model):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="term_groups"
     )
+    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name="groups")
     name = models.CharField(max_length=100)
     icon = models.CharField(max_length=30)
     accent = models.CharField(max_length=10, choices=Accent.choices)
@@ -32,7 +35,7 @@ class Group(models.Model):
     class Meta:
         ordering = ["-created_at"]
         constraints = [
-            models.UniqueConstraint(Lower("name"), "user", name="unique_group_name_per_user"),
+            models.UniqueConstraint(Lower("name"), "course", name="unique_group_name_per_course"),
         ]
 
     def __str__(self) -> str:
@@ -48,6 +51,7 @@ class Term(models.Model):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="terms"
     )
+    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name="terms")
     group = models.ForeignKey(
         Group, null=True, blank=True, on_delete=models.SET_NULL, related_name="terms"
     )
@@ -62,7 +66,7 @@ class Term(models.Model):
     class Meta:
         ordering = ["-created_at"]
         constraints = [
-            models.UniqueConstraint(fields=["user", "key"], name="unique_term_per_user"),
+            models.UniqueConstraint(fields=["course", "key"], name="unique_term_per_course"),
         ]
 
     def __str__(self) -> str:
