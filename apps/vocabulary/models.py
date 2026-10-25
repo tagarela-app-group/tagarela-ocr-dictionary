@@ -13,6 +13,12 @@ class Group(models.Model):
         MANGO = "mango", "Manga"
         SKY = "sky", "Céu"
         PINK = "pink", "Rosa"
+        GRAPE = "grape", "Uva"
+        COCOA = "cocoa", "Cacau"
+        LIME = "lime", "Lima"
+        GOLD = "gold", "Ouro"
+        TEAL = "teal", "Turquesa"
+        SLATE = "slate", "Ardósia"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.ForeignKey(
