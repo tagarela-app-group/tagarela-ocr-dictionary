@@ -8,5 +8,6 @@ urlpatterns = [
     path("health", health, name="health"),
     path("api/v1/", include("apps.captures.urls")),
     path("api/v1/", include("apps.vocabulary.urls")),
+    path("api/v1/", include("apps.accounts.urls")),
     path("api/auth/", include("allauth.headless.urls")),
 ]

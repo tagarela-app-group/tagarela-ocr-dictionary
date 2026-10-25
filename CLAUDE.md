@@ -5,6 +5,7 @@ Backend Django REST do Tagarela (app Flutter em `../mob`). Guarda conta, captura
 ## Produto
 
 - Conta: um e-mail = uma pessoa, entra por senha, Google ou Apple.
+- País de origem fica na conta (ISO alpha-2 + `XK`, opcional) e vira bandeira no avatar. Não é idioma: idioma da interface é escolha do aparelho, a API não guarda.
 - Captura: texto que a pessoa revisa, marca termos e confirma; termos confirmados vão pro vocabulário.
 - Vocabulário: termo único por pessoa, organizado em grupos que só a pessoa cria. IA nunca organiza.
 - App já espera e falta: ficha do termo via IA, revisão espaçada, palavra do dia.
