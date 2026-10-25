@@ -17,7 +17,7 @@ App cliente (Flutter): repo `tagarela-app-group/tagarela`.
 
 1. Início de chat novo: ativar skill `caveman` (nível `full`).
 2. Cada coisa no seu lugar. Conteúdo novo vai no doc do assunto. Doc não repete outro doc.
-3. Docs: só o necessário. Objetivo, estilo caveman, sem perder informação.
+3. Docs enxutos: mapa, não manual. Só o essencial pra entender: decisão, regra, porquê, armadilha. O que o código já mostra (valor exato, assinatura, texto de tela, lista de testes) fica fora. Frase curta, estilo caveman. Teto: ARCHITECTURE 8 KB, PRODUCT 2 KB. Vai passar: enxugar antes de somar. Vale pra este arquivo também.
 4. View fina: serializer valida → service faz → `Response`. Regra de negócio só em service. Toda entrada (body e query) passa por serializer que herda `StrictSerializer`: campo desconhecido = 400.
 5. Lib ou serviço externo só dentro de `providers/`. Resto do código não importa direto. Framework de infraestrutura tem lugar fixo: allauth só em `apps/accounts/` e `config/` (settings, urls).
 6. Limite, URL, TTL, idioma: sempre setting (env → `config/settings.py` → `.env.example`). Nunca valor solto no código. Segredo só no `.env` (fora do git).

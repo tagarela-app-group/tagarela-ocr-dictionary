@@ -1,270 +1,123 @@
 # ARCHITECTURE — Tagarela API
 
+Mapa técnico. Detalhe fica no código. Aqui só decisão, regra e armadilha.
+
 ## Stack
 
-- Python 3.12, Django 5.2, Django REST Framework 3.15+.
-- PostgreSQL 16 (psycopg 3).
-- Auth: django-allauth 65 headless (cliente `app`), token JWT HS256. Login social: Google e Apple.
-- Local: Docker Compose (`api`, `db`, `mailpit`). Imagem `python:3.12-slim` + lib de sistema `libpq5` (Postgres).
+- Python 3.12, Django 5.2, DRF 3.15+, PostgreSQL 16 (psycopg 3).
+- Auth: django-allauth 65 headless (cliente `app`), JWT HS256. Login social: Google e Apple.
+- Local: Docker Compose (`api`, `db`, `mailpit`).
 
-## Decisão: monólito modular
+## Decisões
 
-Um backend Django, responsabilidade separada por app. Sem microserviço: projeto no início, microserviço = complexidade em deploy, comunicação, logs, observabilidade, rede, manutenção, testes.
-
-Auth: allauth dentro do monólito (app `accounts`). Better Auth descartado: lib TypeScript, exigiria serviço Node separado (2º runtime e deploy). Port Python dele ainda imaturo (1ª versão em 09/2026, 1 mantenedor).
-
-Texto da foto e do áudio: extraído no celular (repo do app). A API recebe só o texto, nunca arquivo. OCR (PaddleOCR), transcrição (faster-whisper), fila (Celery + Redis) e dicionário saíram em 2026-10-24: o app parou de usar, e a imagem carregava GBs de modelo. Trabalho pesado novo (ex.: IA da ficha do termo): decidir fila na hora.
-
-Princípios: Postgres é a verdade. Estrutura simples, sem camada extra sem necessidade.
+- Monólito modular: um Django, um app por responsabilidade. Sem microserviço no início.
+- allauth dentro do monólito. Better Auth descartado: TypeScript, exigiria 2º runtime e deploy.
+- Foto e áudio: texto extraído no celular. API recebe só texto, nunca arquivo. OCR, transcrição, fila e dicionário saíram em 2026-10-24 (imagem com GBs de modelo). Trabalho pesado novo (IA da ficha): decidir fila na hora.
+- Postgres é a verdade. Sem camada extra sem necessidade.
 
 ## Pastas
 
 ```
-config/                    settings, urls raiz, health.py (GET /health), tests.py (health), wsgi/asgi
+config/        settings, urls raiz, health.py, tests.py
 apps/
-  common/                  peças compartilhadas sem model
-    serializers.py         StrictSerializer (campo desconhecido = 400)
-  accounts/                conta e login (allauth headless)
-    models.py              User (login por e-mail, `name`, sem username), UserManager
-    forms.py               SignupForm (`name` no cadastro), forms do admin
-    adapters.py            AccountAdapter (aviso de conta existente sem link), SocialAccountAdapter (`name` do Google)
-    templates/account/email/  e-mails pt-BR (base, código, conta existente)
-    admin.py               User no admin
-    tests/                 fluxos de auth, model, admin
-  captures/                rascunho do que a pessoa capturou (texto, foto, áudio) até confirmar a análise
-    models.py              Capture, CaptureTerm
-    serializers.py         entrada (estrita) e saída
-    services.py            CaptureService (criar, editar, confirmar, descartar), CaptureConflict (409)
-    views.py, urls.py      rotas /api/v1/captures
-    admin.py               Capture (termos inline) no admin
-    tests/                 testes do app (helpers.py: usuário, captura)
-  vocabulary/              vocabulário da pessoa: grupos e termos confirmados
-    models.py              Group, Term
-    serializers.py         entrada (estrita) e saída
-    services.py            VocabularyService (listar, criar grupo, mover, entrar termos), term_key
-    views.py, urls.py      rotas /api/v1/vocabulary, groups, terms/move
-    admin.py               Group e Term no admin
-    migrations/0002        termos das capturas já analisadas entram no vocabulário
-    tests/                 testes do app (helpers.py: grupo, termo)
-docs/                      PRODUCT, ARCHITECTURE
-.github/workflows/ci.yml   esteira
-pyproject.toml             config do ruff e coverage (sem dependência)
-requirements.txt           dependências da app (imagem)
-requirements-dev.txt       ruff, coverage, pip-audit (fora da imagem)
+  common/      StrictSerializer (campo desconhecido = 400)
+  accounts/    User (login por e-mail, `name`), adapters, forms, e-mails pt-BR
+  captures/    Capture, CaptureTerm: rascunho até confirmar a análise
+  vocabulary/  Group, Term: vocabulário da pessoa
+  <app>/       models, serializers, services, views, urls, admin, tests/ (helpers.py)
 ```
 
-- Dependência entre apps: `captures` → `vocabulary` (confirmar entra os termos) → `common`. `vocabulary` não importa `captures` (só a migration 0002 lê as capturas). `common` não depende de ninguém. `accounts` não depende de ninguém. App que precisar de usuário: `get_user_model()` / `settings.AUTH_USER_MODEL`, nunca import direto de `accounts.models`.
-- `accounts` sem rota própria (sem `urls.py`). Rotas do allauth: `include` em `config/urls.py`.
+- Dependência: `captures` → `vocabulary` → `common`. `accounts` e `common` não dependem de ninguém.
+- Usuário: `get_user_model()` / `settings.AUTH_USER_MODEL`. Nunca import de `accounts.models`.
+- `accounts` sem `urls.py`: rotas do allauth em `config/urls.py`.
 
 ## Onde colocar
 
-- Endpoint: view em `apps/<app>/views.py` + `apps/<app>/urls.py` + `include` em `config/urls.py` sob `api/v1/<recurso>/`.
-- Validação de entrada: serializer herdando `StrictSerializer` (`apps.common.serializers`): campo desconhecido = 400, junto com os outros erros. Vale pra body e query. Regra reutilizável: `validators.py`. Limite: setting.
-- Regra de negócio, orquestração: `services.py`.
-- Lib/serviço externo: `providers/<nome>.py`. Trocar provedor = mexer só no provider.
-- Auth (cadastro, login, e-mail, social): config `ACCOUNT_*` / `SOCIALACCOUNT_*` / `HEADLESS_*` em `config/settings.py`. Código só em `apps/accounts/` (adapter, form, template). allauth não aparece fora daí.
-- Tabela: `models.py` + migration + registro em `admin.py`.
-- Setting: env → `config/settings.py` → `.env.example` + tabela Config abaixo.
-- Transversal (health, settings, urls raiz): `config/`.
-- Módulo novo: app novo `apps/<nome>/` em `INSTALLED_APPS`, mesma estrutura dos atuais.
+- Endpoint: `views.py` + `urls.py` do app + `include` em `config/urls.py` sob `api/v1/`.
+- Entrada (body e query): serializer que herda `StrictSerializer`.
+- Regra de negócio: `services.py`. Lib externa: `providers/<nome>.py`.
+- Auth: config em `config/settings.py`, código só em `apps/accounts/`.
+- Tabela: model + migration + `admin.py`.
+- Setting: env → `config/settings.py` → `.env.example`.
 
-## Fluxo
+## Captura
 
-Captura: app cria com o texto (`POST captures` com `text`; foto e áudio: texto já extraído no celular) → `ready`. Arquivo nunca sobe. Depois: app salva texto editado e termos (`PATCH`) → confirma (`POST confirm`, `analyzed`) → termos entram no vocabulário, sem grupo. Pessoa cria grupo e move os termos (`POST groups`, `POST terms/move`).
+- Offline first: nasce no celular com `id` UUID do app. Mesmo `id` de novo = 200 com o existente. `id` de outro usuário = 409.
+- Nasce `ready` com `text`. `original_text` = o que veio do celular.
+- Termo = trecho do texto (`text`, `start`, `end` em code points). Palavra dentro de expressão vale.
+- `PATCH terms` troca a lista toda. `PATCH text` mantém os termos que ainda batem no mesmo lugar. Edita só em `ready`.
+- Confirmar (1+ termo): `analyzed` e termos entram no vocabulário, na mesma transação.
+- Descartar = `discarded_at`. Some da lista. `updated_since` traz o descarte pro outro aparelho.
 
-## Captura (`captures`)
+## Vocabulário
 
-- Rascunho do que a pessoa capturou. Offline first: nasce no celular, o app sincroniza quando tiver internet. `id` = UUID gerado no app: mesmo `id` de novo = 200 com o que já existe (envio repetido não duplica). `id` de outro usuário = 409.
-- Status: `ready` → `analyzed` (confirmou a análise). Nasce sempre `ready`, com o texto (digitado ou extraído no celular).
-- Texto e termos: `text` = atual (editável), `original_text` = o que veio do celular (digitado ou extraído). Termo = trecho do texto (`text`, `start`, `end` em caracteres). Palavra e expressão que a contém coexistem ("mind" e "mind the gap"). `PATCH` com `terms` troca a lista toda; só `text` mantém os termos que ainda batem no mesmo lugar. Edita só em `ready`.
-- Confirmar: exige 1+ termo → `analyzed` (`analyzed_at`) e os termos entram no vocabulário (mesma transação, ver Vocabulário). De novo em `analyzed`: 200, nada entra. A IA que monta a ficha de cada termo entra depois.
-- Descartar: só marca `discarded_at`. Registro fica no banco; some da lista e do detalhe. Sincronização (`updated_since`) traz o descarte, pro outro aparelho apagar.
+- Termo único por pessoa: `key` = espaços juntados + `casefold`. Já existe: não entra (ficam grupo e texto da 1ª vez).
+- Termo nasce sem grupo. Grupo é escolha da pessoa, nunca da IA.
+- Grupo: nome único por pessoa, ignora maiúscula. `icon` = slug do catálogo do app (API não guarda a lista). `accent` = uma das 6 cores.
+- Mover: tudo ou nada. Termo ou grupo de outra pessoa = 400. `group: null` = Sem grupo.
+- Apagar grupo: sem rota ainda. FK `SET_NULL` já solta os termos.
 
-## Vocabulário (`vocabulary`)
+## Auth
 
-- Termo nasce ao confirmar a captura, sem grupo ("Sem grupo" no app). Grupo é sempre escolha da pessoa, nunca da IA.
-- Termo único por pessoa: `key` = texto com espaços juntados, em minúsculo (`casefold`). Já existe = não entra de novo (ficam o grupo e o texto da 1ª vez). Repetido na mesma captura: entra uma vez. Outra pessoa com o mesmo termo: cada uma tem o seu.
-- Texto = como foi escrito na 1ª captura (espaços juntados). `kind`: com espaço = `expression`, sem = `word`. `level` nasce 0 (SRS depois). `translation` vazia até a IA da ficha.
-- Grupo: nome até `VOCABULARY_GROUP_NAME_MAX_LENGTH`, espaços juntados, único por pessoa ignorando maiúscula. `icon` = id do catálogo do app (slug `a-z0-9_`, até 30): a API não guarda a lista, pro app ganhar ícone sem mexer aqui. `accent` = uma das 6 cores (`violet`, `coral`, `mint`, `mango`, `sky`, `pink`).
-- Mover: lista de termos + grupo de destino (`null` = volta pra Sem grupo). Tudo ou nada: termo ou grupo que não é da pessoa = 400, nada muda. Desfazer no app = mover de volta pro grupo de origem.
-- Ordem: grupo e termo mais novos primeiro (`created_at`).
-- Apagar grupo: sem rota ainda. Model já solta os termos (`SET_NULL` = Sem grupo).
-
-## Auth (`accounts`)
-
-- allauth headless, cliente `app`. Base: `/api/auth/app/v1`. Formato de resposta, erros e flows: do allauth (`data`, `meta`, `errors[].param`, `data.flows[].is_pending`).
-- Usuário: `accounts.User` (`AUTH_USER_MODEL`). E-mail único em minúsculo, `name`, sem username. `display` na resposta = `name` ou, vazio, e-mail.
-- Usuário na resposta (`data.user`): campos do allauth (`id`, `display`, `email`, `has_usable_password`) + `name` e `picture` (`HeadlessAdapter.serialize_user`). `picture` = foto da conta social (Google); some quando não há. `name` some quando vazio (Apple sem nome).
-- Token: JWT HS256 assinado com `DJANGO_SECRET_KEY`. Access `AUTH_ACCESS_TOKEN_TTL_SECONDS`, refresh `AUTH_REFRESH_TOKEN_TTL_SECONDS`. Refresh rotaciona a cada uso. Trocar `DJANGO_SECRET_KEY` derruba todo login.
-- Header: fluxo pendente (verificar e-mail, reset) = `X-Session-Token` (vem em `meta.session_token`). Logado = `Authorization: Bearer <access_token>`.
-- Fluxos:
-  - Cadastro: `POST auth/signup` `{name, email, password}` → 401, flow `verify_email` pendente, código por e-mail → `POST auth/email/verify` `{key}` → 200 + `meta.access_token`, `meta.refresh_token`.
-  - Login: `POST auth/login` `{email, password}` → 200 + tokens. Senha errada → 400. E-mail não verificado → 401 `verify_email` (código novo).
-  - Esqueci a senha: `POST auth/password/request` `{email}` → 401, flow `password_reset_by_code` → `GET auth/password/reset` (header `X-Password-Reset-Key: <código>`) valida → `POST auth/password/reset` `{key, password}` → 200 + tokens.
-  - Google/Apple: login nativo no app → `POST auth/provider/token` `{provider, process: "login", token: {client_id, id_token}}` → 200 + tokens. Backend valida assinatura e `aud` do `id_token`.
-  - Renovar: `POST tokens/refresh` `{refresh_token}` → 200, novo par em `data`.
-  - Sessão: `GET auth/session` (Bearer) → usuário. Sair: `DELETE auth/session` (Bearer) → 401, refresh deixa de valer. Access vale até expirar.
-- Código: 6 dígitos, vale `AUTH_CODE_TTL_SECONDS`, 3 tentativas (padrão do allauth).
-- Senha: validadores padrão do Django (mín. 8, não comum, não só número, não parecida com o e-mail). Mensagem pt-BR.
-- Anti-enumeração: cadastro com e-mail existente e reset de e-mail desconhecido respondem igual ao caso normal. E-mail existente recebe aviso sem link. E-mail desconhecido não recebe nada (`ACCOUNT_EMAIL_UNKNOWN_ACCOUNTS = False`). Sem link porque não há frontend web (`HEADLESS_ONLY`).
-- Social: provider sem client ID na env fica desligado. `GOOGLE_CLIENT_ID` = client ID web (o `serverClientId` do app; é o `aud` do id_token). `APPLE_CLIENT_ID` = bundle ID do iOS (lista por vírgula). Apple só no iOS: Android exigiria fluxo web + endpoint de callback. E-mail verificado pelo provider = entra na conta que já tem esse e-mail. Nome: Google manda; Apple não manda no token (`name` vazio).
-- E-mail: dev manda SMTP pro Mailpit do compose (caixa de entrada em http://localhost:8025, porta SMTP 1025, aceita qualquer login). Produção: SMTP real via `EMAIL_*`. Assunto com prefixo `[Tagarela] `. Templates pt-BR sobrescrevem os do allauth (`apps.accounts` antes do allauth em `INSTALLED_APPS`).
-- Templates em `apps/accounts/templates/account/email/`: cada mensagem tem `.txt` e `.html` (multipart; o cliente escolhe). HTML em `base_message.html` (tabelas + estilo inline, cores do design system, sem links), código em `code_block.html`. Cadastro usa `email_confirmation_signup_message.*`, que inclui o `email_confirmation_message.*`. `AccountAdapter.send_mail` põe `code_minutes` (de `AUTH_CODE_TTL_SECONDS`) no contexto. Visual validado no mockup (linha E-mails).
-- Rate limit: padrão do allauth, guardado no cache do Django (LocMem, por processo).
-- Rotas `/api/v1`: exigem `Authorization: Bearer <access_token>`. Padrão do DRF em `REST_FRAMEWORK`: `JWTTokenAuthentication` do allauth + `IsAuthenticated`. Sem token, token inválido ou vencido: 401 (`WWW-Authenticate: Bearer`). Rota nova nasce protegida; aberta só com `AllowAny` explícito.
-- Abertas: `/health` (monitoramento, sem dado de usuário), `/admin/` (login próprio do Django), `/api/auth/*` (o próprio login).
-
-## Dados
-
-`User` (tabela `accounts_user`): `email` (único), `name` (char 150, pode vazio), `password`, `is_active`, `is_staff`, `is_superuser`, `last_login`, `date_joined`. Tabelas do allauth: `account_emailaddress` (e-mail + `verified`), `socialaccount_socialaccount` (vínculo Google/Apple por `uid`).
-
-`Capture` (tabela `captures_capture`): `id` (UUID do app), `user`, `source` (`text`, `audio`, `photo`), `status`, `original_text`, `text`, `captured_at` (hora no celular), `processed_at`, `analyzed_at`, `discarded_at`, `created_at`, `updated_at`. Índice (`user`, `updated_at`).
-
-`CaptureTerm` (tabela `captures_captureterm`): `capture`, `text` (char 255), `start`, `end`. Único (`capture`, `start`, `end`). Ordem: `start`, depois o maior primeiro.
-
-`Group` (tabela `vocabulary_group`): `id` (UUID), `user`, `name` (char 100), `icon` (char 30), `accent`, `created_at`. Único (`lower(name)`, `user`).
-
-`Term` (tabela `vocabulary_term`): `id` (UUID), `user`, `group` (nulo = Sem grupo; grupo apagado = nulo), `text`, `key` (char 255), `kind` (`word`, `expression`), `translation` (pode vazio), `level` (0 a 5), `created_at`. Único (`user`, `key`).
-
-Migration `vocabulary.0002`: termos das capturas já analisadas (descartadas depois inclusive) entram no vocabulário, na ordem da análise, sem repetir.
-
-Migration `captures.0002`: apagou as capturas sem texto (`waiting_file`, `processing`, `failed`, só do dev) e a tabela `lexical_lexicalentry` do dicionário que saiu.
+- Base `/api/auth/app/v1`. Resposta e erros no formato do allauth.
+- Fluxo pendente (verificar e-mail, reset) = 401 + `X-Session-Token`. Logado = `Authorization: Bearer`.
+- Rotas: `auth/signup` → código no e-mail → `auth/email/verify`. `auth/login`. `auth/password/request` → `auth/password/reset` (código). `auth/provider/token` (id_token Google/Apple). `tokens/refresh` (rotaciona). `GET`/`DELETE auth/session`.
+- JWT assinado com `DJANGO_SECRET_KEY`: trocar a chave derruba todo login.
+- Anti-enumeração: e-mail existente ou desconhecido responde igual. E-mail sem link (não há web, `HEADLESS_ONLY`).
+- Social: sem client ID na env = desligado. `GOOGLE_CLIENT_ID` = client web (`aud` do id_token). `APPLE_CLIENT_ID` = bundle iOS. Apple só no iOS. Mesmo e-mail verificado = mesma conta.
+- `data.user` ganha `name` e `picture` (`HeadlessAdapter.serialize_user`).
+- E-mail: templates pt-BR `.txt` + `.html` em `apps/accounts/templates/account/email/`. Dev: Mailpit em http://localhost:8025.
+- `/api/v1` exige Bearer por padrão. Rota aberta só com `AllowAny` explícito. Abertas: `/health`, `/admin/`, `/api/auth/*`.
 
 ## Endpoints
 
-Sem barra final. Sem throttle. Resposta só JSON. `/api/v1` exige login (Bearer, seção Auth). Rotas de auth: seção Auth.
+Contrato público: o app consome. Sem barra final, só JSON. Formato exato: serializers. Validação: 400 `{"campo": ["msg pt-BR"]}`. Conflito: 409 `{"detail"}`.
 
-`GET /health` → 200 `{"status": "ok", "checks": {"database": true}}`. Algum `false` → 503, `"status": "unhealthy"`.
+| Rota | Nota |
+| --- | --- |
+| `GET /health` | 200. Banco fora: 503 |
+| `POST /api/v1/captures` | `{id, source, captured_at, text}`. 201 nova, 200 já existia |
+| `GET /api/v1/captures` | `updated_since?`, `cursor?`. Sem `updated_since`: sem as descartadas |
+| `GET`/`PATCH`/`DELETE /api/v1/captures/{id}` | `PATCH {text?, terms?}`. `DELETE` 204 |
+| `POST /api/v1/captures/{id}/confirm` | 200 `analyzed`. 400 sem termo |
+| `GET /api/v1/vocabulary` | `{groups, ungrouped}` |
+| `POST /api/v1/groups` | `{name, icon, accent}`. 201. 400 nome repetido |
+| `POST /api/v1/terms/move` | `{terms, group}`. 200 com o vocabulário atualizado |
 
-Captura (`/api/v1/captures`). Erro de validação: 400 `{"campo": ["<mensagem pt-BR>"]}`. Conflito de estado: 409 `{"detail": "..."}`. De outro usuário ou descartada: 404.
+## Comandos
 
-| Rota | Corpo | Resposta |
-| --- | --- | --- |
-| `POST /api/v1/captures` | JSON `{id, source, captured_at, text}`. `text` obrigatório em qualquer `source`, até `CAPTURE_MAX_TEXT_LENGTH` (foto e áudio: texto extraído no celular). Nasce `ready` | 201 nova, 200 já existia, 409 `id` de outro usuário |
-| `GET /api/v1/captures` | query `updated_since?` (ISO 8601), `cursor?` | 200 `{next, previous, results}`. Mais recente (`updated_at`) primeiro, `CAPTURE_PAGE_SIZE` por página. Sem `updated_since`: sem as descartadas. Com: tudo que mudou desde então, descartadas incluídas |
-| `GET /api/v1/captures/{id}` | | 200 |
-| `PATCH /api/v1/captures/{id}` | JSON `{text?, terms?: [{text, start, end}]}`, ao menos um. Até `CAPTURE_MAX_TERMS` termos de até `CAPTURE_MAX_TERM_LENGTH` | 200. 400 termo que não bate com o texto ou repetido. 409 já `analyzed` |
-| `POST /api/v1/captures/{id}/confirm` | | 200 `analyzed` (de novo: 200). 400 sem termo |
-| `DELETE /api/v1/captures/{id}` | | 204, mesmo se já descartada |
+Subir: `README.md`. No container (`docker compose exec api ...`), sempre com saída curta:
 
-Captura na resposta:
-
-```json
-{
-  "id": "0b8f…", "source": "photo", "status": "ready",
-  "text": "MIND THE GAP", "original_text": "MIND THE GAP",
-  "terms": [{ "text": "MIND THE GAP", "start": 0, "end": 12 }],
-  "captured_at": "…", "processed_at": "…", "analyzed_at": null,
-  "discarded_at": null, "created_at": "…", "updated_at": "…"
-}
-```
-
-Vocabulário (`/api/v1`). Erro de validação: 400 `{"campo": ["<mensagem pt-BR>"]}`.
-
-| Rota | Corpo | Resposta |
-| --- | --- | --- |
-| `GET /api/v1/vocabulary` | | 200 `{groups, ungrouped}` |
-| `POST /api/v1/groups` | JSON `{name, icon, accent}` | 201 grupo (com `terms: []`). 400 nome vazio, longo ou já usado ("Você já tem um grupo com esse nome.") |
-| `POST /api/v1/terms/move` | JSON `{terms: [id, ...], group: id ou null}`. 1+ termo | 200 vocabulário atualizado. 400 termo ou grupo que não existe (ou de outra pessoa) |
-
-Vocabulário na resposta:
-
-```json
-{
-  "groups": [{
-    "id": "5c1e…", "name": "Viagem", "icon": "travel", "accent": "sky",
-    "terms": [{ "id": "9a0d…", "text": "jet lag", "translation": "", "kind": "expression", "level": 0 }]
-  }],
-  "ungrouped": [{ "id": "71b2…", "text": "touch base", "translation": "", "kind": "expression", "level": 0 }]
-}
-```
-
-`/admin/`: Django admin. `Capture` com busca por texto e e-mail, filtro por tipo e status, termos na própria tela. `Group` e `Term` com busca por nome/texto e e-mail.
-
-## Config (env)
-
-`.env` criado do `.env.example`, fora do git. Env lido só em `config/settings.py`; código usa `django.conf.settings`.
-
-| Var | Padrão | Nota |
-| --- | --- | --- |
-| `DJANGO_SECRET_KEY` | inseguro, só dev | |
-| `DJANGO_DEBUG` | `False` | |
-| `DJANGO_ALLOWED_HOSTS` | `localhost,127.0.0.1` | separado por vírgula. `.env.example` inclui `10.0.2.2` (emulador Android). Celular físico: IP do PC na rede |
-| `POSTGRES_DB`, `_USER`, `_PASSWORD` | `tagarela` | |
-| `POSTGRES_HOST`, `_PORT` | `localhost`, `5432` | compose: `db` |
-| `CAPTURE_MAX_TEXT_LENGTH` | 2000 | texto digitado, extraído ou editado |
-| `CAPTURE_MAX_TERMS` | 50 | termos por captura |
-| `CAPTURE_MAX_TERM_LENGTH` | 100 | caracteres por termo |
-| `CAPTURE_PAGE_SIZE` | 50 | |
-| `VOCABULARY_GROUP_NAME_MAX_LENGTH` | 30 | caracteres do nome do grupo |
-| `AUTH_ACCESS_TOKEN_TTL_SECONDS` | 300 (5 min) | |
-| `AUTH_REFRESH_TOKEN_TTL_SECONDS` | 2592000 (30 dias) | |
-| `AUTH_CODE_TTL_SECONDS` | 900 (15 min) | código de e-mail e de reset |
-| `GOOGLE_CLIENT_ID` | vazio (desligado) | client ID web |
-| `APPLE_CLIENT_ID` | vazio (desligado) | bundle ID iOS, lista por vírgula |
-| `EMAIL_BACKEND` | console | `.env.example`: SMTP (`django.core.mail.backends.smtp.EmailBackend`) pro Mailpit |
-| `EMAIL_HOST`, `_PORT`, `_HOST_USER`, `_HOST_PASSWORD`, `_USE_TLS` | `localhost`, 587, vazio, vazio, `True` | `.env.example`: `mailpit`, 1025, `False`. API fora do Docker: `localhost` |
-| `DEFAULT_FROM_EMAIL` | `Tagarela <nao-responda@localhost>` | |
-
-Fixo em settings (sem env): `LANGUAGE_CODE` pt-br, `TIME_ZONE` America/Sao_Paulo.
-
-## Rodar e inspecionar
-
-Subir: `README.md`. Comandos via `docker compose exec`:
-
-- Testes: `api python manage.py test`. Cobertura: `api sh -c "pip install -r requirements-dev.txt && coverage run manage.py test && coverage report"`.
-- Migration: `api python manage.py makemigrations`. `migrate` roda sozinho na subida do `api`.
-- Admin: `api python manage.py createsuperuser` (pede e-mail) → http://localhost:8000/admin/.
-- Código de verificação/reset no dev: Mailpit em http://localhost:8025 (e-mail renderizado, texto, cabeçalhos e checagem de compatibilidade do HTML).
-- Capturas: `db psql -U <POSTGRES_USER> -d <POSTGRES_DB>` → `SELECT id, source, status, text, updated_at FROM captures_capture ORDER BY updated_at DESC;`. Vocabulário: `SELECT text, kind, group_id FROM vocabulary_term ORDER BY created_at DESC;`
-- Ambiente de antes da limpeza (com `worker` e `redis`): `docker compose up --build --remove-orphans`. Volumes velhos: `docker volume rm api_capture_uploads api_whisper_models`.
-
-Formato e análise: fora do container (ruff não está na imagem). Venv local: `python -m venv .venv` → `pip install -r requirements-dev.txt` → `ruff format .`, `ruff check --fix .`.
-
-Compose: `api` só sobe com `db` healthy. Healthcheck `pg_isready -h 127.0.0.1`: `-h` força TCP, porque no initdb o servidor temporário só aceita socket local e daria falso pronto.
-
-Servidor = `runserver` (dev, hot reload pelo volume `.:/app`). Subida do `api`: `migrate` e depois `runserver`. Migration falhou: container para, erro em `docker compose logs api`. Sem setup de produção (lá, `migrate` vai num passo de deploy, fora do servidor).
+- Testes: `python manage.py test -v 0`
+- Migration: `python manage.py makemigrations`. `migrate` roda sozinho na subida.
+- Formato, fora do container (venv com `requirements-dev.txt`): `ruff format .`, `ruff check --fix .`
+- Antes do push: ruff, testes, `makemigrations --check --dry-run`. Mexeu em Docker: `docker compose up` + `/health` 200.
+- Healthcheck do `db` usa `pg_isready -h 127.0.0.1`: sem `-h`, o initdb dá falso pronto.
 
 ## Convenções
 
-- Código (nomes, classes) em inglês. Texto pro usuário (erro) e docs em pt-BR.
-- Import absoluto: `apps.<app>.<módulo>`, `config.<módulo>`.
-- Formato e análise: ruff (`pyproject.toml`). Regras padrão do ruff, linha 100, migrations fora (geradas pelo Django). RUF012 desligada: Django declara `Meta` (constraints, indexes) com lista.
-- Aspas duplas. Type hints nas assinaturas.
-- View: função com `@api_view` (um método) ou `APIView` (vários métodos na mesma rota).
-- Nomes: `<X>Provider` (externo), `<X>Service` (regra), `<X>Serializer`.
-- Dependência injetável: construtor recebe opcional, padrão real (`self.provider = provider or XProvider()`).
-- Falha de serviço externo opcional: provider trata e segue. Não derruba a requisição.
+- Código em inglês. Texto pro usuário e docs em pt-BR.
+- Import absoluto `apps.<app>.<módulo>`. Aspas duplas, type hints. Ruff, linha 100.
+- View: `@api_view` (um método) ou `APIView` (vários). Nomes: `<X>Service`, `<X>Provider`, `<X>Serializer`.
+- Dependência injetável: `self.provider = provider or XProvider()`.
 
 ## Testes
 
-- Runner do Django (`manage.py test`). Sem pytest por enquanto. Base: `django.test.TestCase` (banco), `SimpleTestCase` (sem banco), `rest_framework.test.APISimpleTestCase` (endpoint sem banco), `APITestCase` (endpoint com banco).
-- Roda no container `api` (precisa do Postgres).
-- Arquivo: pacote `apps/<app>/tests/` (`__init__.py` + `test_<módulo>.py`). Transversal (`config/`): `config/tests.py`. Helper compartilhado no pacote do app (ex.: `apps/captures/tests/helpers.py`).
-- Auth: fluxo inteiro pelo client do Django em `/api/auth/app/v1`. Código lido de `mail.outbox`. `cache.clear()` no `setUp` (rate limit do allauth fica no cache). Google/Apple: `patch` da validação do id_token (`allauth.socialaccount.providers.google.views._verify_and_decode`, `AppleOAuth2Adapter.get_verified_identity_data`).
-- Nunca rede real: fake via construtor ou `patch`. Health: `patch` de `config.health.connections`.
-- Captura: `make_user`, `make_capture` em `apps/captures/tests/helpers.py`. Vocabulário: `make_group`, `make_term` em `apps/vocabulary/tests/helpers.py`. Migration de dados: importar o módulo (`import_module`) e chamar a função com `django.apps.apps`.
-- API: status + corpo (200, 400, 401). Endpoint com login: `self.client.force_authenticate(get_user_model()(email=...))` no `setUp`; Bearer de verdade só no teste de auth.
-- Código novo ou alterado: teste junto. Bug corrigido: teste que reproduz o bug.
-- Cobertos: `GET /health`, auth (cadastro + código, login, e-mail não verificado, reset, refresh, logout, Google, Apple, token inválido, anti-enumeração, Bearer nas rotas `/api/v1` (401 sem token ou token inválido, 200 com o access do login), e-mails em texto e HTML com o código e a validade), `User` (manager, display, admin), `StrictSerializer`, captura (criar, sem texto em qualquer fonte, id repetido e de outro usuário, campos e valores inválidos, lista com cursor e `updated_since`, detalhe, termos com palavra dentro de expressão, editar texto mantendo termos, termo que não bate, 409 em `analyzed`, confirmar, descartar), vocabulário (listar com e sem grupo, ordem, criar grupo, nome repetido ignorando maiúscula, campos inválidos, mover, voltar pra Sem grupo, termo ou grupo de outra pessoa, termo repetido não entra, confirmar entra os termos, migration das capturas analisadas).
+- Runner do Django, no container (precisa do Postgres). Arquivo: `apps/<app>/tests/test_<módulo>.py`.
+- Nunca rede real: fake via construtor ou `patch`.
+- Auth: fluxo pelo client, código de `mail.outbox`, `cache.clear()` no `setUp` (rate limit do allauth). Google/Apple: `patch` da validação do id_token.
+- Endpoint logado: `force_authenticate` no `setUp`.
+- Migration de dados: `import_module` + chamar a função com `django.apps.apps`.
 
 ## Dependências
 
-- Antes de adicionar pacote: checar PyPI (último release, manutenção), issues abertas, compatibilidade com Python 3.12. Contar ao usuário antes de instalar. Pacote nativo, pesado ou pouco mantido: perguntar.
-- `requirements.txt` com faixa `>=x,<y`.
-- `requirements-dev.txt`: ferramenta de dev e esteira, nunca na imagem. `ruff` fixo (versão nova muda formatação): subiu = `ruff format .` + `ruff check .` no mesmo PR.
+- Antes de pacote novo: checar PyPI e issues, contar ao usuário. Nativo ou pesado: perguntar.
+- `requirements.txt` em faixa, sem lockfile: release nova pode quebrar a esteira.
+- `requirements-dev.txt` fora da imagem. `ruff` fixo: subiu = reformatar no mesmo PR.
 - Lib de sistema nova: `Dockerfile` junto.
 
 ## Git e CI
 
-- Repo `tagarela-app-group/tagarela-ocr-dictionary`.
-- Branches: `main` = produção. `develop` = integração. Cada mudança = branch nova a partir da `develop`: `feat/`, `fix/`, `docs/`, `ci/`, `chore/` + nome curto.
-- Fluxo: branch → commit → push → PR pra `develop`. Esteira verde → squash merge, branch apagada. Release: PR `develop` → `main` (merge commit), aprovado pelo usuário.
-- Commit: Conventional Commits em pt-BR (ex.: `feat: análise de áudio`).
-- Esteira: `.github/workflows/ci.yml`. Roda em todo PR e push na `develop`/`main`. Push novo no mesmo PR cancela a rodada anterior.
-  - Formato, análise, migrations e testes: `ruff format --check`, `ruff check` (antes de instalar as dependências: falha rápido), `manage.py check`, `makemigrations --check --dry-run`, `coverage run manage.py test` com Postgres 16 como service (credenciais = padrão do `config/settings.py`, sem env). Cobertura no resumo da rodada + artefato `cobertura` (`coverage.xml`), 7 dias.
-  - Dependências vulneráveis: instala `requirements.txt`, congela (`pip freeze`, antes de instalar o pip-audit) e roda `pip-audit` no resultado, transitivas incluídas. Motivo: `requirements.txt` em faixa, então audita o que o pip resolveu. Vulnerabilidade conhecida reprova o PR.
-  - Docker: `docker compose up --build --wait` com `.env.example` e volume vazio (passa pelo initdb) + `GET /health` 200. Falhou: logs do compose na rodada.
-- Python da esteira = `PYTHON_VERSION` no workflow = imagem do `Dockerfile`. Subiu um: subir o outro junto.
-- Sem lockfile: `requirements.txt` em faixa, esteira instala a última versão dentro dela. Release nova de dependência pode quebrar a esteira sem mudança no código.
-- Antes do push, rodar local: `ruff format .`, `ruff check .`, `manage.py test`, `makemigrations --check --dry-run`. Mexeu em Docker/compose: `docker compose up` + `/health` 200.
+- Repo `tagarela-app-group/tagarela-ocr-dictionary`. Branch da `develop` (`feat/`, `fix/`, `docs/`, `ci/`, `chore/`). PR pra `develop`, squash. Commit: Conventional Commits em pt-BR.
+- Esteira: ruff, `check`, `makemigrations --check`, testes com cobertura (Postgres service), `pip-audit` sobre o `pip freeze`, `docker compose up --wait` + `/health`.
+- `PYTHON_VERSION` do workflow = imagem do `Dockerfile`. Subiu um, subir o outro.
