@@ -1,9 +1,13 @@
 from django.db import IntegrityError, transaction
+from django.db.models import Prefetch
+from django.http import Http404
+from django.utils import timezone
 from rest_framework import serializers
 
 from apps.vocabulary.models import Group, Term
 
 DUPLICATE_GROUP = "Você já tem um grupo com esse nome."
+MISSING_TERM = "Algum termo não existe mais."
 
 
 def clean_text(text: str) -> str:
@@ -17,19 +21,27 @@ def term_key(text: str) -> str:
 class VocabularyService:
     def vocabulary(self, user) -> dict:
         return {
-            "groups": Group.objects.filter(user=user).prefetch_related("terms"),
-            "ungrouped": Term.objects.filter(user=user, group__isnull=True),
+            "groups": self._groups(user),
+            "ungrouped": self._terms(user).filter(group__isnull=True),
         }
 
-    def create_group(self, user, data: dict) -> Group:
-        if Group.objects.filter(user=user, name__iexact=data["name"]).exists():
-            raise serializers.ValidationError({"name": [DUPLICATE_GROUP]})
+    def group(self, user, group_id) -> Group:
+        group = self._groups(user).filter(pk=group_id).first()
+        if group is None:
+            raise Http404
 
-        try:
-            with transaction.atomic():
-                return Group.objects.create(user=user, **data)
-        except IntegrityError as exc:
-            raise serializers.ValidationError({"name": [DUPLICATE_GROUP]}) from exc
+        return group
+
+    def create_group(self, user, data: dict) -> Group:
+        return self._save_group(Group(user=user), data)
+
+    def update_group(self, group: Group, data: dict) -> Group:
+        self._save_group(group, data)
+
+        return self.group(group.user_id, group.pk)
+
+    def delete_group(self, group: Group) -> None:
+        group.delete()
 
     def move(self, user, term_ids: list, group_id) -> None:
         group = None
@@ -38,17 +50,26 @@ class VocabularyService:
             if group is None:
                 raise serializers.ValidationError({"group": ["Esse grupo não existe mais."]})
 
-        terms = Term.objects.filter(user=user, pk__in=term_ids)
-        if terms.count() != len(set(term_ids)):
-            raise serializers.ValidationError({"terms": ["Algum termo não existe mais."]})
+        self._owned(self._terms(user), term_ids, MISSING_TERM).update(group=group)
 
-        terms.update(group=group)
+    @transaction.atomic
+    def delete_terms(self, user, term_ids: list) -> None:
+        terms = self._owned(self._terms(user), term_ids, MISSING_TERM)
+        Term.objects.filter(user=user, deleted_at__isnull=False).delete()
+
+        terms.update(deleted_at=timezone.now())
+
+    def restore_terms(self, user, term_ids: list) -> None:
+        deleted = Term.objects.filter(user=user, deleted_at__isnull=False)
+
+        self._owned(deleted, term_ids, "Não dá mais pra desfazer.").update(deleted_at=None)
 
     def add_terms(self, user, texts: list[str]) -> None:
         new = {}
         for text in texts:
             new.setdefault(term_key(text), clean_text(text))
 
+        Term.objects.filter(user=user, key__in=new, deleted_at__isnull=False).delete()
         Term.objects.bulk_create(
             [
                 Term(
@@ -61,3 +82,35 @@ class VocabularyService:
             ],
             ignore_conflicts=True,
         )
+
+    def _terms(self, user):
+        return Term.objects.filter(user=user, deleted_at__isnull=True)
+
+    def _groups(self, user):
+        return Group.objects.filter(user=user).prefetch_related(
+            Prefetch("terms", queryset=self._terms(user))
+        )
+
+    def _owned(self, terms, term_ids: list, message: str):
+        owned = terms.filter(pk__in=term_ids)
+        if owned.count() != len(set(term_ids)):
+            raise serializers.ValidationError({"terms": [message]})
+
+        return owned
+
+    def _save_group(self, group: Group, data: dict) -> Group:
+        name = data.get("name")
+        others = Group.objects.filter(user=group.user).exclude(pk=group.pk)
+        if name is not None and others.filter(name__iexact=name).exists():
+            raise serializers.ValidationError({"name": [DUPLICATE_GROUP]})
+
+        for field, value in data.items():
+            setattr(group, field, value)
+
+        try:
+            with transaction.atomic():
+                group.save()
+        except IntegrityError as exc:
+            raise serializers.ValidationError({"name": [DUPLICATE_GROUP]}) from exc
+
+        return group

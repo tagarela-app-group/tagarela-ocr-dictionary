@@ -6,7 +6,7 @@ from apps.vocabulary.models import Group, Term
 from apps.vocabulary.services import clean_text
 
 
-class GroupCreateSerializer(StrictSerializer):
+class GroupInputSerializer(StrictSerializer):
     name = serializers.CharField(
         max_length=settings.VOCABULARY_GROUP_NAME_MAX_LENGTH,
         error_messages={
@@ -21,13 +21,22 @@ class GroupCreateSerializer(StrictSerializer):
     def validate_name(self, value: str) -> str:
         return clean_text(value)
 
+    def validate(self, attrs):
+        if not attrs:
+            raise serializers.ValidationError("Envie o nome, o ícone ou a cor.")
 
-class MoveTermsSerializer(StrictSerializer):
+        return attrs
+
+
+class TermsSerializer(StrictSerializer):
     terms = serializers.ListField(
         child=serializers.UUIDField(),
         allow_empty=False,
         error_messages={"empty": "Escolha pelo menos um termo."},
     )
+
+
+class MoveTermsSerializer(TermsSerializer):
     group = serializers.UUIDField(allow_null=True)
 
 
