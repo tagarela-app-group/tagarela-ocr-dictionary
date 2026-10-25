@@ -7,9 +7,10 @@ from apps.courses.models import Course
 
 class CourseService:
     def courses(self, user):
-        return Course.objects.filter(user=user).annotate(
+        courses = Course.objects.filter(user=user).annotate(
             term_count=Count("terms", filter=Q(terms__deleted_at__isnull=True))
         )
+        return courses.order_by("created_at")
 
     def course(self, user, course_id) -> Course:
         course = self.courses(user).filter(pk=course_id).first()
