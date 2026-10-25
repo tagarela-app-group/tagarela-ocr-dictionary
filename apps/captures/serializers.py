@@ -12,6 +12,7 @@ class CaptureListParamsSerializer(StrictSerializer):
 
 class CaptureCreateSerializer(StrictSerializer):
     id = serializers.UUIDField()
+    course = serializers.UUIDField(required=False)
     source = serializers.ChoiceField(choices=Capture.Source.choices)
     captured_at = serializers.DateTimeField()
     text = serializers.CharField(
@@ -72,6 +73,7 @@ class CaptureSerializer(serializers.ModelSerializer):
         model = Capture
         fields = (
             "id",
+            "course",
             "source",
             "status",
             "text",

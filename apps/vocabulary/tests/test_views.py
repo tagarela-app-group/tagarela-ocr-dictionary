@@ -2,6 +2,8 @@ from django.utils import timezone
 from rest_framework.test import APITestCase
 
 from apps.captures.tests.helpers import make_user
+from apps.courses.models import Course
+from apps.courses.tests.helpers import make_course
 from apps.vocabulary.models import Group, Term
 from apps.vocabulary.tests.helpers import make_group, make_term
 
@@ -349,3 +351,63 @@ class RestoreTermsTests(VocabularyApiTestCase):
 
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json(), {"terms": ["Não dá mais pra desfazer."]})
+
+
+class CourseScopeTests(VocabularyApiTestCase):
+    def setUp(self):
+        super().setUp()
+        self.english = make_course(self.user)
+        self.spanish = make_course(self.user, "es", "pt")
+
+    def test_lists_only_the_active_course(self):
+        make_group(self.user, "Viagem")
+        make_term(self.user, "layover")
+        make_group(self.user, "Viaje", course=self.spanish)
+        make_term(self.user, "hola", course=self.spanish)
+
+        english = self.client.get(VOCABULARY).json()
+        self.client.post(f"/api/v1/courses/{self.spanish.id}/activate")
+        spanish = self.client.get(VOCABULARY).json()
+
+        self.assertEqual([g["name"] for g in english["groups"]], ["Viagem"])
+        self.assertEqual([t["text"] for t in english["ungrouped"]], ["layover"])
+        self.assertEqual([g["name"] for g in spanish["groups"]], ["Viaje"])
+        self.assertEqual([t["text"] for t in spanish["ungrouped"]], ["hola"])
+
+    def test_account_without_course_starts_english_through_portuguese(self):
+        self.client.force_authenticate(make_user("bia@example.com"))
+
+        response = self.client.get(VOCABULARY)
+
+        self.assertEqual(response.status_code, 200)
+        course = Course.objects.get(user__email="bia@example.com")
+        self.assertEqual((course.learning, course.base, course.active), ("en", "pt", True))
+
+    def test_new_group_enters_the_active_course(self):
+        make_group(self.user, "Música", course=self.spanish)
+
+        response = self.client.post(
+            GROUPS, {"name": "Música", "icon": "music", "accent": "pink"}, format="json"
+        )
+
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(Group.objects.get(pk=response.json()["id"]).course, self.english)
+
+    def test_group_of_another_course_is_not_found(self):
+        spanish_group = make_group(self.user, "Viaje", course=self.spanish)
+        term = make_term(self.user, "layover")
+
+        patch = self.client.patch(f"{GROUPS}/{spanish_group.id}", {"name": "X"}, format="json")
+        move = self.client.post(
+            MOVE, {"terms": [str(term.id)], "group": str(spanish_group.id)}, format="json"
+        )
+
+        self.assertEqual(patch.status_code, 404)
+        self.assertEqual(move.json(), {"group": ["Esse grupo não existe mais."]})
+
+    def test_terms_of_another_course_cannot_be_deleted(self):
+        hola = make_term(self.user, "hola", course=self.spanish)
+
+        response = self.client.post(DELETE, {"terms": [str(hola.id)]}, format="json")
+
+        self.assertEqual(response.json(), {"terms": ["Algum termo não existe mais."]})

@@ -4,6 +4,7 @@ from django.contrib.auth import get_user_model
 from django.utils import timezone
 
 from apps.captures.models import Capture
+from apps.courses.tests.helpers import make_course
 
 TEXT = "Please mind the gap between the train and the platform."
 
@@ -13,6 +14,7 @@ def make_user(email: str = "ana@example.com"):
 
 
 def make_capture(user, **fields) -> Capture:
+    fields.setdefault("course", make_course(user))
     defaults = {
         "id": uuid.uuid4(),
         "user": user,

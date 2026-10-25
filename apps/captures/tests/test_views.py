@@ -8,6 +8,8 @@ from rest_framework.test import APITestCase
 from apps.captures.models import Capture, CaptureTerm
 from apps.captures.tests.helpers import TEXT, make_capture, make_user
 from apps.captures.views import CapturePagination
+from apps.courses.models import Course
+from apps.courses.tests.helpers import make_course
 from apps.vocabulary.models import Term
 from apps.vocabulary.tests.helpers import make_group, make_term
 
@@ -313,3 +315,52 @@ class ConfirmCaptureTests(CaptureApiTestCase):
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json(), {"terms": ["Escolha pelo menos um termo."]})
         self.assertFalse(Term.objects.exists())
+
+
+class CaptureCourseTests(CaptureApiTestCase):
+    def setUp(self):
+        super().setUp()
+        self.english = make_course(self.user)
+        self.spanish = make_course(self.user, "es", "pt")
+
+    def test_capture_without_course_enters_the_active_one(self):
+        response = self.create()
+
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.json()["course"], str(self.english.id))
+        self.assertEqual(Capture.objects.get().course, self.english)
+
+    def test_capture_keeps_the_course_it_was_made_in(self):
+        response = self.create(course=str(self.spanish.id))
+
+        self.assertEqual(response.json()["course"], str(self.spanish.id))
+        self.assertEqual(Capture.objects.get().course, self.spanish)
+
+    def test_course_of_another_user_returns_400(self):
+        other = make_course(make_user("bia@example.com"))
+
+        response = self.create(course=str(other.id))
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json(), {"course": ["Esse curso não existe."]})
+        self.assertFalse(Capture.objects.exists())
+
+    def test_list_brings_every_course(self):
+        make_capture(self.user, course=self.english)
+        make_capture(self.user, course=self.spanish)
+
+        results = self.client.get(URL).json()["results"]
+
+        courses = {item["course"] for item in results}
+        self.assertEqual(courses, {str(self.english.id), str(self.spanish.id)})
+
+    def test_confirm_sends_terms_to_the_capture_course(self):
+        capture = make_capture(self.user, course=self.spanish)
+        CaptureTerm.objects.create(capture=capture, **MIND)
+        make_term(self.user, "mind", course=self.english)
+
+        self.client.post(self.url(capture, "/confirm"))
+
+        self.assertEqual(Term.objects.get(course=self.spanish).text, "mind")
+        self.assertEqual(Term.objects.filter(course=self.english).count(), 1)
+        self.assertEqual(Course.objects.get(active=True), self.english)

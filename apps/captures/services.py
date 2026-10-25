@@ -5,6 +5,8 @@ from rest_framework import serializers, status
 from rest_framework.exceptions import APIException
 
 from apps.captures.models import Capture, CaptureTerm
+from apps.courses.models import Course
+from apps.courses.services import CourseService
 from apps.vocabulary.services import VocabularyService
 
 
@@ -14,8 +16,13 @@ class CaptureConflict(APIException):
 
 
 class CaptureService:
-    def __init__(self, vocabulary: VocabularyService | None = None):
+    def __init__(
+        self,
+        vocabulary: VocabularyService | None = None,
+        courses: CourseService | None = None,
+    ):
         self.vocabulary = vocabulary or VocabularyService()
+        self.courses = courses or CourseService()
 
     def list(self, user, updated_since=None):
         captures = Capture.objects.filter(user=user).prefetch_related("terms")
@@ -40,11 +47,13 @@ class CaptureService:
         if existing is not None:
             return self._same_owner(existing, user), False
 
+        course = self._course(user, data.get("course"))
         try:
             with transaction.atomic():
                 capture = Capture.objects.create(
                     id=data["id"],
                     user=user,
+                    course=course,
                     source=data["source"],
                     status=Capture.Status.READY,
                     original_text=data["text"],
@@ -91,7 +100,7 @@ class CaptureService:
             capture.status = Capture.Status.ANALYZED
             capture.analyzed_at = timezone.now()
             capture.save(update_fields=["status", "analyzed_at", "updated_at"])
-            self.vocabulary.add_terms(capture.user, [term.text for term in capture.terms.all()])
+            self.vocabulary.add_terms(capture.course, [term.text for term in capture.terms.all()])
 
         return capture
 
@@ -101,6 +110,16 @@ class CaptureService:
 
         capture.discarded_at = timezone.now()
         capture.save(update_fields=["discarded_at", "updated_at"])
+
+    def _course(self, user, course_id) -> Course:
+        if course_id is None:
+            return self.courses.active(user)
+
+        course = Course.objects.filter(user=user, pk=course_id).first()
+        if course is None:
+            raise serializers.ValidationError({"course": ["Esse curso não existe."]})
+
+        return course
 
     def _same_owner(self, capture: Capture, user) -> Capture:
         if capture.user_id != user.pk:
