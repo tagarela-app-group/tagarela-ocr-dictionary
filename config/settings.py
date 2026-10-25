@@ -28,6 +28,7 @@ INSTALLED_APPS = [
     "allauth.headless",
     "apps.captures",
     "apps.vocabulary",
+    "apps.language_analysis",
 ]
 
 MIDDLEWARE = [
@@ -133,6 +134,11 @@ CAPTURE_MAX_TERM_LENGTH = int(os.environ.get("CAPTURE_MAX_TERM_LENGTH", "100"))
 CAPTURE_PAGE_SIZE = int(os.environ.get("CAPTURE_PAGE_SIZE", "50"))
 
 VOCABULARY_GROUP_NAME_MAX_LENGTH = int(os.environ.get("VOCABULARY_GROUP_NAME_MAX_LENGTH", "30"))
+
+LANGUAGE_ANALYSIS_MAX_TEXT_LENGTH = int(os.environ.get("LANGUAGE_ANALYSIS_MAX_TEXT_LENGTH", "3000"))
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
+GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.5-flash-lite")
+GEMINI_TIMEOUT = int(os.environ.get("GEMINI_TIMEOUT", "30"))
 
 REST_FRAMEWORK = {
     "DEFAULT_RENDERER_CLASSES": [

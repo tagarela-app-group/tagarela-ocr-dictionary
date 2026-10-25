@@ -8,6 +8,7 @@ Backend Django REST do Tagarela (app Flutter em `../mob`). Guarda conta, captura
 - Captura: texto que a pessoa revisa, marca termos e confirma; termos confirmados vão pro vocabulário.
 - Vocabulário: termo único por pessoa, organizado em grupos que só a pessoa cria. IA nunca organiza.
 - App já espera e falta: ficha do termo via IA, revisão espaçada, palavra do dia.
+- Análise linguística: recebe texto e termo opcional, consulta Gemini sem persistir resultados e devolve uma ficha estruturada.
 
 ## Regras
 
@@ -28,6 +29,7 @@ Backend Django REST do Tagarela (app Flutter em `../mob`). Guarda conta, captura
 
 - Monólito modular, um app por responsabilidade em `apps/`; Postgres é a verdade. Dependências só descem (`captures` → `vocabulary` → `common`).
 - Camadas: view fina (serializer valida, service faz, `Response`), regra de negócio só em service, lib externa só em `providers/`.
+- `language_analysis` usa `GeminiProvider`; o endpoint exige a autenticação padrão e não mantém histórico de interações.
 - Toda entrada passa por serializer estrito (campo desconhecido = 400).
 - Auth: allauth headless isolado em `accounts` e `config`; resto do app usa `get_user_model()`. Rotas exigem login por padrão.
 - Captura é offline first: o app gera o id, a API sincroniza de forma idempotente e soft delete propaga entre aparelhos.
