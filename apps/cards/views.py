@@ -18,8 +18,6 @@ class TermDetailView(APIView):
         serializer = RevealSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        detail = TermCardService().reveal(
-            request.user, term_id, serializer.validated_data["revealed"]
-        )
+        detail = TermCardService().reveal(request.user, term_id, serializer.validated_data)
 
         return Response(TermDetailSerializer(detail).data)

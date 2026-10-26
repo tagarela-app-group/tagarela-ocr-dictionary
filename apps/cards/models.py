@@ -11,6 +11,7 @@ class TermCard(models.Model):
     prompt_version = models.CharField(max_length=20)
     model = models.CharField(max_length=100)
     revealed = models.BooleanField(default=False)
+    pitfall_revealed = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

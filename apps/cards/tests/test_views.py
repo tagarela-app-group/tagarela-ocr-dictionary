@@ -15,7 +15,7 @@ from apps.vocabulary.models import Term
 from apps.vocabulary.tests.helpers import make_group, make_term
 
 TEXT = "Honestly, I'm on the fence about it. Let me sleep on it."
-METADATA = {"model": "gemini-3.5-flash-lite", "prompt_version": "2.4"}
+METADATA = {"model": "gemini-3.5-flash-lite", "prompt_version": "2.5"}
 
 
 class StubAnalysis:
@@ -102,7 +102,7 @@ class TermDetailTests(TermCardApiTestCase):
         )
         fence.refresh_from_db()
         self.assertEqual(fence.translation, "administrar")
-        self.assertEqual(TermCard.objects.get().prompt_version, "2.4")
+        self.assertEqual(TermCard.objects.get().prompt_version, "2.5")
 
     def test_card_speaks_learning_and_base_languages(self):
         term = make_term(self.user, "run")
@@ -162,8 +162,10 @@ class TermDetailTests(TermCardApiTestCase):
     def test_wrong_and_right_forms_become_a_mistake(self):
         self.analysis.analysis = {
             **VALID_ANALYSIS,
-            "pitfall_wrong": "on the wall",
-            "pitfall_right": "on the fence",
+            "pitfall_wrong": "em cima do muro",
+            "pitfall_right": "em cima do muro",
+            "source_pitfall_wrong": "on the wall",
+            "source_pitfall_right": "on the fence",
             "literal": "na cerca",
         }
         term = make_term(self.user, "on the fence")
@@ -185,6 +187,8 @@ class TermDetailTests(TermCardApiTestCase):
                 "literal",
                 "imagine",
                 "source_pitfall",
+                "source_pitfall_wrong",
+                "source_pitfall_right",
                 "source_imagine",
                 "source_formality_note",
                 "source_contexts",
@@ -308,6 +312,28 @@ class RevealTermTests(TermCardApiTestCase):
 
         self.assertFalse(response.json()["revealed"])
         self.assertFalse(TermCard.objects.get().revealed)
+
+    def test_pitfall_is_revealed_on_its_own(self):
+        term = make_term(self.user, "gap")
+        self.assertFalse(self.client.get(self.url(term)).json()["pitfall_revealed"])
+
+        response = self.reveal(term, pitfall_revealed=True)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["pitfall_revealed"])
+        self.assertFalse(response.json()["revealed"])
+        card = TermCard.objects.get()
+        self.assertTrue(card.pitfall_revealed)
+        self.assertFalse(card.revealed)
+
+    def test_empty_body_returns_400(self):
+        term = make_term(self.user, "gap")
+        self.client.get(self.url(term))
+
+        response = self.reveal(term)
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(set(response.json()), {"revealed"})
 
     def test_without_card_returns_404_and_builds_nothing(self):
         term = make_term(self.user, "gap")

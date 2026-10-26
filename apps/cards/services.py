@@ -21,14 +21,15 @@ class TermCardService:
 
         return {"term": term, "card": card, "captures": captures}
 
-    def reveal(self, user, term_id, revealed: bool) -> dict:
+    def reveal(self, user, term_id, changes: dict[str, bool]) -> dict:
         term = self._term(user, term_id)
         card = TermCard.objects.filter(term=term).first()
         if card is None:
             raise Http404
 
-        card.revealed = revealed
-        card.save(update_fields=["revealed", "updated_at"])
+        for field, value in changes.items():
+            setattr(card, field, value)
+        card.save(update_fields=[*changes, "updated_at"])
 
         return {"term": term, "card": card, "captures": self._captures(term)}
 
