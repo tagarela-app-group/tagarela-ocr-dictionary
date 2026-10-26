@@ -14,4 +14,8 @@ class SystemPromptTests(SimpleTestCase):
         )
         self.assertIn("In literal, give the word-for-word rendering", SYSTEM_PROMPT)
         self.assertIn("In imagine, write in the target", SYSTEM_PROMPT)
+        self.assertIn(
+            "In source_pitfall, give the same warning in the source language", SYSTEM_PROMPT
+        )
+        self.assertIn("source_imagine, write the same image in the source language", SYSTEM_PROMPT)
         self.assertIn("dialogue of two to four lines between speakers A and B", SYSTEM_PROMPT)
