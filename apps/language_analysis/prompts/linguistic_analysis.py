@@ -1,7 +1,7 @@
 import json
 from typing import Any
 
-PROMPT_VERSION = "2.3"
+PROMPT_VERSION = "2.4"
 
 SYSTEM_PROMPT = """You are a language-learning specialist. Analyze the provided text and determine its language.
 Prioritize contextual meaning when sufficient context exists. Recognize isolated words with multiple meanings,
@@ -12,9 +12,12 @@ When context is insufficient, do not invent a specific interpretation.
 Also describe the focus in the source language, for learners who read it directly: a short plain definition, its meaning
 in this context, and an explanation. Give the IPA transcription of the focus between slashes, or null when it does not
 apply. List common collocations, synonyms and antonyms in the source language, or empty lists when none are natural.
-Rate formality as slang, informal, neutral or formal, and say in the source language where the focus is safe to use.
-List everyday situations, written in the source language, saying whether the focus fits each one and, when it does not,
-a better source-language alternative. In pitfall, warn in the target language about a typical mistake that speakers of
+Rate formality as slang, informal, neutral or formal. In formality_note, say in the target language where the focus is
+safe to use, and in source_formality_note, say the same in the source language. In contexts, list everyday situations,
+written in the target language, saying whether the focus fits each one and, when it does not, a better source-language
+alternative. In source_contexts, list the same situations in the same order, written in the source language, with the
+same fits and alternative. Every field whose name starts with source_, including the items of source_contexts, is
+written only in the source language. In pitfall, warn in the target language about a typical mistake that speakers of
 the target language make with the focus, such as a false friend or a literal translation, or use null when there is none.
 In source_pitfall, give the same warning in the source language, or null when pitfall is null.
 When that mistake is a wrong source-language form, put it in pitfall_wrong and the correct form in pitfall_right;

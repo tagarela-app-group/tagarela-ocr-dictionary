@@ -36,7 +36,7 @@ class LinguisticAnalysisServiceTests(SimpleTestCase):
 
         self.assertEqual(result["analysis"], VALID_ANALYSIS)
         self.assertEqual(
-            result["metadata"], {"model": "gemini-3.5-flash-lite", "prompt_version": "2.3"}
+            result["metadata"], {"model": "gemini-3.5-flash-lite", "prompt_version": "2.4"}
         )
         self.assertIn('"selected_term":"run"', provider.prompt)
 
@@ -69,6 +69,8 @@ class LinguisticAnalysisServiceTests(SimpleTestCase):
         for field, value in (
             ("formality", "casual"),
             ("contexts", None),
+            ("source_contexts", None),
+            ("source_formality_note", ""),
             ("phonetic", ""),
             ("literal", ""),
             ("dialogue", [{"speaker": "C", "text": "Hi.", "translation": "Oi."}]),
