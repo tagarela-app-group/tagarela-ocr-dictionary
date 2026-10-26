@@ -15,7 +15,7 @@ from apps.vocabulary.models import Term
 from apps.vocabulary.tests.helpers import make_group, make_term
 
 TEXT = "Honestly, I'm on the fence about it. Let me sleep on it."
-METADATA = {"model": "gemini-3.5-flash-lite", "prompt_version": "2.0"}
+METADATA = {"model": "gemini-3.5-flash-lite", "prompt_version": "2.1"}
 
 
 class StubAnalysis:
@@ -101,7 +101,7 @@ class TermDetailTests(TermCardApiTestCase):
         )
         fence.refresh_from_db()
         self.assertEqual(fence.translation, "administrar")
-        self.assertEqual(TermCard.objects.get().prompt_version, "2.0")
+        self.assertEqual(TermCard.objects.get().prompt_version, "2.1")
 
     def test_card_speaks_learning_and_base_languages(self):
         term = make_term(self.user, "run")
@@ -133,10 +133,10 @@ class TermDetailTests(TermCardApiTestCase):
                 "synonyms": ["manage", "operate"],
                 "antonyms": [],
                 "formality": "neutral",
-                "formality_note": "Serve em conversa e no trabalho.",
+                "formality_note": "Fine in conversation and at work.",
                 "fits": [
-                    {"context": "Reunião de trabalho", "fits": True, "alternative": None},
-                    {"context": "Contrato", "fits": False, "alternative": "operate"},
+                    {"context": "Work meeting", "fits": True, "alternative": None},
+                    {"context": "Contract", "fits": False, "alternative": "operate"},
                 ],
             },
         )
