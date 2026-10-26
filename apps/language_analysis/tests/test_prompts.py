@@ -18,9 +18,8 @@ class SystemPromptTests(SimpleTestCase):
         )
 
     def test_asks_the_playful_parts_of_the_card(self):
-        self.assertIn(
-            "put it in pitfall_wrong and the correct form in pitfall_right", SYSTEM_PROMPT
-        )
+        self.assertIn("put it in source_pitfall_wrong and the correct form in", SYSTEM_PROMPT)
+        self.assertIn("source_pitfall_right, both written in the source language", SYSTEM_PROMPT)
         self.assertIn("In literal, give the word-for-word rendering", SYSTEM_PROMPT)
         self.assertIn("In imagine, write in the target", SYSTEM_PROMPT)
         self.assertIn(

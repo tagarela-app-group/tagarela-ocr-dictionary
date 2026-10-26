@@ -1,7 +1,7 @@
 import json
 from typing import Any
 
-PROMPT_VERSION = "2.4"
+PROMPT_VERSION = "2.5"
 
 SYSTEM_PROMPT = """You are a language-learning specialist. Analyze the provided text and determine its language.
 Prioritize contextual meaning when sufficient context exists. Recognize isolated words with multiple meanings,
@@ -20,8 +20,9 @@ same fits and alternative. Every field whose name starts with source_, including
 written only in the source language. In pitfall, warn in the target language about a typical mistake that speakers of
 the target language make with the focus, such as a false friend or a literal translation, or use null when there is none.
 In source_pitfall, give the same warning in the source language, or null when pitfall is null.
-When that mistake is a wrong source-language form, put it in pitfall_wrong and the correct form in pitfall_right;
-otherwise use null for both. In literal, give the word-for-word rendering of the focus in the target language when it is
+When that mistake is a wrong source-language form, put it in source_pitfall_wrong and the correct form in
+source_pitfall_right, both written in the source language; otherwise use null for both. Repeat the same forms in
+pitfall_wrong and pitfall_right. In literal, give the word-for-word rendering of the focus in the target language when it is
 an expression whose literal meaning differs from its real meaning, or null otherwise. In imagine, write in the target
 language one short, vivid mental image that helps remember the meaning, or null when none is natural. In
 source_imagine, write the same image in the source language, or null when imagine is null. Write a short,

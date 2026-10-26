@@ -6,12 +6,19 @@ from apps.vocabulary.models import Group
 
 
 class RevealSerializer(StrictSerializer):
-    revealed = serializers.BooleanField()
+    revealed = serializers.BooleanField(required=False)
+    pitfall_revealed = serializers.BooleanField(required=False)
+
+    def validate(self, attrs):
+        if not attrs:
+            raise serializers.ValidationError({"revealed": ["Informe o que foi revelado."]})
+
+        return attrs
 
 
 def mistake(analysis: dict) -> dict | None:
-    wrong = analysis.get("pitfall_wrong")
-    right = analysis.get("pitfall_right")
+    wrong = analysis.get("source_pitfall_wrong")
+    right = analysis.get("source_pitfall_right")
     if not wrong or not right:
         return None
 
@@ -101,6 +108,7 @@ class TermDetailSerializer(serializers.BaseSerializer):
             "level": term.level,
             "group": term.group and CardGroupSerializer(term.group).data,
             "revealed": card.revealed,
+            "pitfall_revealed": card.pitfall_revealed,
             "card": CardSerializer(card).data,
             "captures": CardCaptureSerializer(detail["captures"], many=True).data,
         }

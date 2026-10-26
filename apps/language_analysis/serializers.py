@@ -126,6 +126,8 @@ class LinguisticAnalysisSerializer(LanguageAnalysisStrictSerializer):
     literal = serializers.CharField(allow_null=True, allow_blank=False)
     imagine = serializers.CharField(allow_null=True, allow_blank=False)
     source_pitfall = serializers.CharField(allow_null=True, allow_blank=False)
+    source_pitfall_wrong = serializers.CharField(allow_null=True, allow_blank=False)
+    source_pitfall_right = serializers.CharField(allow_null=True, allow_blank=False)
     source_imagine = serializers.CharField(allow_null=True, allow_blank=False)
     collocations = word_list(6)
     synonyms = word_list(5)
