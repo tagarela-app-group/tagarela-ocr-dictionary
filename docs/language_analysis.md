@@ -58,6 +58,8 @@ GEMINI_TIMEOUT=30
     "pitfall_right": null,
     "literal": null,
     "imagine": "Alguém no balcão, cuidando de tudo na própria loja.",
+    "source_pitfall": "Run a business is not about speed.",
+    "source_imagine": "Someone behind the counter, taking care of their own shop.",
     "collocations": ["run a business"],
     "synonyms": ["manage", "operate"],
     "antonyms": [],
@@ -71,12 +73,12 @@ GEMINI_TIMEOUT=30
   },
   "metadata": {
     "model": "gemini-3.5-flash-lite",
-    "prompt_version": "2.2"
+    "prompt_version": "2.3"
   }
 }
 ```
 
-Prompt 2.0 added the fields after `usage_notes`; 2.2 added `pitfall_wrong`, `pitfall_right`, `literal`, `imagine` and `dialogue`. `source_*`, `phonetic`, `collocations`, `synonyms`, `antonyms`, `formality_note`, `contexts`, `pitfall_wrong`, `pitfall_right` and `dialogue[].text` are in the source language; `pitfall`, `literal`, `imagine` and `dialogue[].translation` are in the target language. `dialogue[].speaker` is `A` or `B`, two to four lines. `formality` is one of `slang`, `informal`, `neutral`, `formal`.
+Prompt 2.0 added the fields after `usage_notes`; 2.2 added `pitfall_wrong`, `pitfall_right`, `literal`, `imagine` and `dialogue`; 2.3 added `source_pitfall` and `source_imagine`. `source_*`, `phonetic`, `collocations`, `synonyms`, `antonyms`, `formality_note`, `contexts`, `pitfall_wrong`, `pitfall_right` and `dialogue[].text` are in the source language; `pitfall`, `literal`, `imagine` and `dialogue[].translation` are in the target language. `dialogue[].speaker` is `A` or `B`, two to four lines. `formality` is one of `slang`, `informal`, `neutral`, `formal`.
 
 Provider configuration or availability failures return `503`; timeouts return `504`; invalid provider output returns `502`. Request-validation failures return `400`.
 

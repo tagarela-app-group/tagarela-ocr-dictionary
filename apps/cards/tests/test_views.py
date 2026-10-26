@@ -15,7 +15,7 @@ from apps.vocabulary.models import Term
 from apps.vocabulary.tests.helpers import make_group, make_term
 
 TEXT = "Honestly, I'm on the fence about it. Let me sleep on it."
-METADATA = {"model": "gemini-3.5-flash-lite", "prompt_version": "2.2"}
+METADATA = {"model": "gemini-3.5-flash-lite", "prompt_version": "2.3"}
 
 
 class StubAnalysis:
@@ -102,7 +102,7 @@ class TermDetailTests(TermCardApiTestCase):
         )
         fence.refresh_from_db()
         self.assertEqual(fence.translation, "administrar")
-        self.assertEqual(TermCard.objects.get().prompt_version, "2.2")
+        self.assertEqual(TermCard.objects.get().prompt_version, "2.3")
 
     def test_card_speaks_learning_and_base_languages(self):
         term = make_term(self.user, "run")
@@ -117,6 +117,8 @@ class TermDetailTests(TermCardApiTestCase):
                     "definition": "to manage or operate",
                     "in_context": "To manage a small business.",
                     "explanation": "Run is often used for being in charge of a company.",
+                    "pitfall": "Run a business is not about speed.",
+                    "imagine": "Someone behind the counter, taking care of their own shop.",
                 },
                 "base": {
                     "translation": "administrar",
@@ -176,7 +178,16 @@ class TermDetailTests(TermCardApiTestCase):
         old = {
             key: value
             for key, value in VALID_ANALYSIS.items()
-            if key not in {"pitfall_wrong", "pitfall_right", "literal", "imagine", "dialogue"}
+            if key
+            not in {
+                "pitfall_wrong",
+                "pitfall_right",
+                "literal",
+                "imagine",
+                "source_pitfall",
+                "source_imagine",
+                "dialogue",
+            }
         }
         TermCard.objects.create(term=term, analysis=old, prompt_version="2.1", model="m")
 
@@ -184,6 +195,7 @@ class TermDetailTests(TermCardApiTestCase):
 
         self.assertEqual(self.analysis.calls, [])
         self.assertIsNone(card["base"]["literal"])
+        self.assertIsNone(card["learning"]["pitfall"])
         self.assertIsNone(card["mistake"])
         self.assertEqual(card["dialogue"], [])
 

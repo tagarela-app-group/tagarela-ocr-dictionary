@@ -27,6 +27,8 @@ class CardSerializer(serializers.BaseSerializer):
                 "definition": analysis.get("source_definition"),
                 "in_context": analysis.get("source_meaning_in_context"),
                 "explanation": analysis.get("source_explanation"),
+                "pitfall": analysis.get("source_pitfall"),
+                "imagine": analysis.get("source_imagine"),
             },
             "base": {
                 "translation": analysis.get("translation"),

@@ -31,6 +31,8 @@ VALID_ANALYSIS = {
     "pitfall_right": None,
     "literal": None,
     "imagine": "Alguém no balcão, cuidando de tudo na própria loja.",
+    "source_pitfall": "Run a business is not about speed.",
+    "source_imagine": "Someone behind the counter, taking care of their own shop.",
     "collocations": ["run a business", "run the show"],
     "synonyms": ["manage", "operate"],
     "antonyms": [],
