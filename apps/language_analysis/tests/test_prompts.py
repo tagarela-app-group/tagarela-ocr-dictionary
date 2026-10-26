@@ -1,0 +1,9 @@
+from django.test import SimpleTestCase
+
+from apps.language_analysis.prompts.linguistic_analysis import SYSTEM_PROMPT
+
+
+class SystemPromptTests(SimpleTestCase):
+    def test_asks_usage_in_the_language_being_learned(self):
+        self.assertIn("say in the source language where the focus is safe to use", SYSTEM_PROMPT)
+        self.assertIn("everyday situations, written in the source language", SYSTEM_PROMPT)
