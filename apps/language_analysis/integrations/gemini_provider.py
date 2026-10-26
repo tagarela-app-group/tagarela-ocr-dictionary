@@ -35,6 +35,21 @@ class GeminiInvalidResponseError(APIException):
     default_code = "language_analysis_invalid_response"
 
 
+USAGE_CONTEXTS_SCHEMA = {
+    "type": "array",
+    "maxItems": 4,
+    "items": {
+        "type": "object",
+        "additionalProperties": False,
+        "required": ["context", "fits", "alternative"],
+        "properties": {
+            "context": {"type": "string"},
+            "fits": {"type": "boolean"},
+            "alternative": {"type": ["string", "null"]},
+        },
+    },
+}
+
 ANALYSIS_RESPONSE_SCHEMA = {
     "type": "object",
     "additionalProperties": False,
@@ -66,6 +81,8 @@ ANALYSIS_RESPONSE_SCHEMA = {
         "formality",
         "formality_note",
         "contexts",
+        "source_formality_note",
+        "source_contexts",
         "dialogue",
     ],
     "properties": {
@@ -122,20 +139,9 @@ ANALYSIS_RESPONSE_SCHEMA = {
         "antonyms": {"type": "array", "maxItems": 5, "items": {"type": "string"}},
         "formality": {"type": "string", "enum": list(FORMALITY_LEVELS)},
         "formality_note": {"type": ["string", "null"]},
-        "contexts": {
-            "type": "array",
-            "maxItems": 4,
-            "items": {
-                "type": "object",
-                "additionalProperties": False,
-                "required": ["context", "fits", "alternative"],
-                "properties": {
-                    "context": {"type": "string"},
-                    "fits": {"type": "boolean"},
-                    "alternative": {"type": ["string", "null"]},
-                },
-            },
-        },
+        "contexts": USAGE_CONTEXTS_SCHEMA,
+        "source_formality_note": {"type": ["string", "null"]},
+        "source_contexts": USAGE_CONTEXTS_SCHEMA,
         "dialogue": {
             "type": "array",
             "minItems": 2,

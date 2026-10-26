@@ -47,14 +47,14 @@ class CardSerializer(serializers.BaseSerializer):
             "synonyms": analysis.get("synonyms", []),
             "antonyms": analysis.get("antonyms", []),
             "formality": analysis.get("formality"),
-            "formality_note": analysis.get("formality_note"),
+            "formality_note": analysis.get("source_formality_note"),
             "fits": [
                 {
                     "context": usage["context"],
                     "fits": usage["fits"],
                     "alternative": usage["alternative"],
                 }
-                for usage in analysis.get("contexts", [])
+                for usage in analysis.get("source_contexts", [])
             ],
             "dialogue": [
                 {

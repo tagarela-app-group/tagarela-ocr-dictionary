@@ -15,7 +15,7 @@ from apps.vocabulary.models import Term
 from apps.vocabulary.tests.helpers import make_group, make_term
 
 TEXT = "Honestly, I'm on the fence about it. Let me sleep on it."
-METADATA = {"model": "gemini-3.5-flash-lite", "prompt_version": "2.3"}
+METADATA = {"model": "gemini-3.5-flash-lite", "prompt_version": "2.4"}
 
 
 class StubAnalysis:
@@ -102,7 +102,7 @@ class TermDetailTests(TermCardApiTestCase):
         )
         fence.refresh_from_db()
         self.assertEqual(fence.translation, "administrar")
-        self.assertEqual(TermCard.objects.get().prompt_version, "2.3")
+        self.assertEqual(TermCard.objects.get().prompt_version, "2.4")
 
     def test_card_speaks_learning_and_base_languages(self):
         term = make_term(self.user, "run")
@@ -186,6 +186,8 @@ class TermDetailTests(TermCardApiTestCase):
                 "imagine",
                 "source_pitfall",
                 "source_imagine",
+                "source_formality_note",
+                "source_contexts",
                 "dialogue",
             }
         }
@@ -198,6 +200,8 @@ class TermDetailTests(TermCardApiTestCase):
         self.assertIsNone(card["learning"]["pitfall"])
         self.assertIsNone(card["mistake"])
         self.assertEqual(card["dialogue"], [])
+        self.assertIsNone(card["formality_note"])
+        self.assertEqual(card["fits"], [])
 
     def test_next_opens_read_the_saved_card(self):
         term = make_term(self.user, "on the fence")

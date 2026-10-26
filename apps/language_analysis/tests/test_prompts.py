@@ -5,8 +5,17 @@ from apps.language_analysis.prompts.linguistic_analysis import SYSTEM_PROMPT
 
 class SystemPromptTests(SimpleTestCase):
     def test_asks_usage_in_the_language_being_learned(self):
-        self.assertIn("say in the source language where the focus is safe to use", SYSTEM_PROMPT)
-        self.assertIn("everyday situations, written in the source language", SYSTEM_PROMPT)
+        self.assertIn(
+            "in source_formality_note, say the same in the source language", SYSTEM_PROMPT
+        )
+        self.assertIn(
+            "In source_contexts, list the same situations in the same order, written in the source",
+            SYSTEM_PROMPT,
+        )
+        self.assertIn(
+            "Every field whose name starts with source_, including the items of source_contexts",
+            SYSTEM_PROMPT,
+        )
 
     def test_asks_the_playful_parts_of_the_card(self):
         self.assertIn(

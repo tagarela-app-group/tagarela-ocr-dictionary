@@ -133,6 +133,8 @@ class LinguisticAnalysisSerializer(LanguageAnalysisStrictSerializer):
     formality = serializers.ChoiceField(choices=FORMALITY_LEVELS)
     formality_note = serializers.CharField(allow_null=True, allow_blank=False)
     contexts = UsageContextSerializer(many=True, max_length=4)
+    source_formality_note = serializers.CharField(allow_null=True, allow_blank=False)
+    source_contexts = UsageContextSerializer(many=True, max_length=4)
     dialogue = DialogueLineSerializer(many=True, max_length=4)
 
 

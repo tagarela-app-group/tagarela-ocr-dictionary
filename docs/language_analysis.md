@@ -64,8 +64,10 @@ GEMINI_TIMEOUT=30
     "synonyms": ["manage", "operate"],
     "antonyms": [],
     "formality": "neutral",
-    "formality_note": "Fine in conversation and at work.",
-    "contexts": [{"context": "Contract", "fits": false, "alternative": "operate"}],
+    "formality_note": "Tranquilo numa conversa e no trabalho.",
+    "contexts": [{"context": "Contrato", "fits": false, "alternative": "operate"}],
+    "source_formality_note": "Fine in conversation and at work.",
+    "source_contexts": [{"context": "Contract", "fits": false, "alternative": "operate"}],
     "dialogue": [
       {"speaker": "A", "text": "What does your aunt do?", "translation": "O que sua tia faz?"},
       {"speaker": "B", "text": "She runs a bakery downtown.", "translation": "Ela administra uma padaria no centro."}
@@ -73,12 +75,12 @@ GEMINI_TIMEOUT=30
   },
   "metadata": {
     "model": "gemini-3.5-flash-lite",
-    "prompt_version": "2.3"
+    "prompt_version": "2.4"
   }
 }
 ```
 
-Prompt 2.0 added the fields after `usage_notes`; 2.2 added `pitfall_wrong`, `pitfall_right`, `literal`, `imagine` and `dialogue`; 2.3 added `source_pitfall` and `source_imagine`. `source_*`, `phonetic`, `collocations`, `synonyms`, `antonyms`, `formality_note`, `contexts`, `pitfall_wrong`, `pitfall_right` and `dialogue[].text` are in the source language; `pitfall`, `literal`, `imagine` and `dialogue[].translation` are in the target language. `dialogue[].speaker` is `A` or `B`, two to four lines. `formality` is one of `slang`, `informal`, `neutral`, `formal`.
+Prompt 2.0 added the fields after `usage_notes`; 2.2 added `pitfall_wrong`, `pitfall_right`, `literal`, `imagine` and `dialogue`; 2.3 added `source_pitfall` and `source_imagine`; 2.4 added `source_formality_note` and `source_contexts`. `source_*`, `phonetic`, `collocations`, `synonyms`, `antonyms`, `contexts[].alternative`, `pitfall_wrong`, `pitfall_right` and `dialogue[].text` are in the source language; `pitfall`, `literal`, `imagine`, `formality_note`, `contexts[].context` and `dialogue[].translation` are in the target language. `dialogue[].speaker` is `A` or `B`, two to four lines. `formality` is one of `slang`, `informal`, `neutral`, `formal`.
 
 Provider configuration or availability failures return `503`; timeouts return `504`; invalid provider output returns `502`. Request-validation failures return `400`.
 

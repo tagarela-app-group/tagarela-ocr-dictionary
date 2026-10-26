@@ -37,8 +37,13 @@ VALID_ANALYSIS = {
     "synonyms": ["manage", "operate"],
     "antonyms": [],
     "formality": "neutral",
-    "formality_note": "Fine in conversation and at work.",
+    "formality_note": "Tranquilo numa conversa e no trabalho.",
     "contexts": [
+        {"context": "Reunião de trabalho", "fits": True, "alternative": None},
+        {"context": "Contrato", "fits": False, "alternative": "operate"},
+    ],
+    "source_formality_note": "Fine in conversation and at work.",
+    "source_contexts": [
         {"context": "Work meeting", "fits": True, "alternative": None},
         {"context": "Contract", "fits": False, "alternative": "operate"},
     ],
