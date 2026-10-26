@@ -15,19 +15,20 @@ from apps.vocabulary.models import Term
 from apps.vocabulary.tests.helpers import make_group, make_term
 
 TEXT = "Honestly, I'm on the fence about it. Let me sleep on it."
-METADATA = {"model": "gemini-3.5-flash-lite", "prompt_version": "2.1"}
+METADATA = {"model": "gemini-3.5-flash-lite", "prompt_version": "2.2"}
 
 
 class StubAnalysis:
     def __init__(self, error=None):
         self.calls = []
         self.error = error
+        self.analysis = VALID_ANALYSIS
 
     def analyze(self, data):
         self.calls.append(data)
         if self.error:
             raise self.error
-        return {"input": data, "analysis": VALID_ANALYSIS, "metadata": METADATA}
+        return {"input": data, "analysis": self.analysis, "metadata": METADATA}
 
 
 class TermCardApiTestCase(APITestCase):
@@ -101,7 +102,7 @@ class TermDetailTests(TermCardApiTestCase):
         )
         fence.refresh_from_db()
         self.assertEqual(fence.translation, "administrar")
-        self.assertEqual(TermCard.objects.get().prompt_version, "2.1")
+        self.assertEqual(TermCard.objects.get().prompt_version, "2.2")
 
     def test_card_speaks_learning_and_base_languages(self):
         term = make_term(self.user, "run")
@@ -122,7 +123,10 @@ class TermDetailTests(TermCardApiTestCase):
                     "in_context": "Manage a business.",
                     "explanation": "Here, run means manage rather than move quickly.",
                     "pitfall": "Não traduza como correr quando o assunto é uma empresa.",
+                    "literal": None,
+                    "imagine": "Alguém no balcão, cuidando de tudo na própria loja.",
                 },
+                "mistake": None,
                 "examples": [
                     {
                         "text": "She runs a restaurant.",
@@ -138,8 +142,50 @@ class TermDetailTests(TermCardApiTestCase):
                     {"context": "Work meeting", "fits": True, "alternative": None},
                     {"context": "Contract", "fits": False, "alternative": "operate"},
                 ],
+                "dialogue": [
+                    {
+                        "speaker": "A",
+                        "text": "What does your aunt do?",
+                        "translation": "O que sua tia faz?",
+                    },
+                    {
+                        "speaker": "B",
+                        "text": "She runs a bakery downtown.",
+                        "translation": "Ela administra uma padaria no centro.",
+                    },
+                ],
             },
         )
+
+    def test_wrong_and_right_forms_become_a_mistake(self):
+        self.analysis.analysis = {
+            **VALID_ANALYSIS,
+            "pitfall_wrong": "on the wall",
+            "pitfall_right": "on the fence",
+            "literal": "na cerca",
+        }
+        term = make_term(self.user, "on the fence")
+
+        card = self.client.get(self.url(term)).json()["card"]
+
+        self.assertEqual(card["mistake"], {"wrong": "on the wall", "right": "on the fence"})
+        self.assertEqual(card["base"]["literal"], "na cerca")
+
+    def test_card_saved_before_the_new_fields_still_opens(self):
+        term = make_term(self.user, "gap")
+        old = {
+            key: value
+            for key, value in VALID_ANALYSIS.items()
+            if key not in {"pitfall_wrong", "pitfall_right", "literal", "imagine", "dialogue"}
+        }
+        TermCard.objects.create(term=term, analysis=old, prompt_version="2.1", model="m")
+
+        card = self.client.get(self.url(term)).json()["card"]
+
+        self.assertEqual(self.analysis.calls, [])
+        self.assertIsNone(card["base"]["literal"])
+        self.assertIsNone(card["mistake"])
+        self.assertEqual(card["dialogue"], [])
 
     def test_next_opens_read_the_saved_card(self):
         term = make_term(self.user, "on the fence")

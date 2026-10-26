@@ -36,7 +36,7 @@ class LinguisticAnalysisServiceTests(SimpleTestCase):
 
         self.assertEqual(result["analysis"], VALID_ANALYSIS)
         self.assertEqual(
-            result["metadata"], {"model": "gemini-3.5-flash-lite", "prompt_version": "2.1"}
+            result["metadata"], {"model": "gemini-3.5-flash-lite", "prompt_version": "2.2"}
         )
         self.assertIn('"selected_term":"run"', provider.prompt)
 
@@ -66,6 +66,12 @@ class LinguisticAnalysisServiceTests(SimpleTestCase):
             self.analyze(response=invalid)
 
     def test_rejects_a_response_without_the_card_fields(self):
-        for field, value in (("formality", "casual"), ("contexts", None), ("phonetic", "")):
+        for field, value in (
+            ("formality", "casual"),
+            ("contexts", None),
+            ("phonetic", ""),
+            ("literal", ""),
+            ("dialogue", [{"speaker": "C", "text": "Hi.", "translation": "Oi."}]),
+        ):
             with self.subTest(field=field), self.assertRaises(GeminiInvalidResponseError):
                 self.analyze(response={**VALID_ANALYSIS, field: value})

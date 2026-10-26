@@ -8,7 +8,7 @@ from rest_framework import status
 from rest_framework.exceptions import APIException
 
 from apps.language_analysis.prompts.linguistic_analysis import SYSTEM_PROMPT
-from apps.language_analysis.serializers import FORMALITY_LEVELS
+from apps.language_analysis.serializers import DIALOGUE_SPEAKERS, FORMALITY_LEVELS
 
 
 class GeminiConfigurationError(APIException):
@@ -54,12 +54,17 @@ ANALYSIS_RESPONSE_SCHEMA = {
         "source_meaning_in_context",
         "source_explanation",
         "pitfall",
+        "pitfall_wrong",
+        "pitfall_right",
+        "literal",
+        "imagine",
         "collocations",
         "synonyms",
         "antonyms",
         "formality",
         "formality_note",
         "contexts",
+        "dialogue",
     ],
     "properties": {
         "focus": {"type": "string"},
@@ -104,6 +109,10 @@ ANALYSIS_RESPONSE_SCHEMA = {
         "source_meaning_in_context": {"type": ["string", "null"]},
         "source_explanation": {"type": "string"},
         "pitfall": {"type": ["string", "null"]},
+        "pitfall_wrong": {"type": ["string", "null"]},
+        "pitfall_right": {"type": ["string", "null"]},
+        "literal": {"type": ["string", "null"]},
+        "imagine": {"type": ["string", "null"]},
         "collocations": {"type": "array", "maxItems": 6, "items": {"type": "string"}},
         "synonyms": {"type": "array", "maxItems": 5, "items": {"type": "string"}},
         "antonyms": {"type": "array", "maxItems": 5, "items": {"type": "string"}},
@@ -120,6 +129,21 @@ ANALYSIS_RESPONSE_SCHEMA = {
                     "context": {"type": "string"},
                     "fits": {"type": "boolean"},
                     "alternative": {"type": ["string", "null"]},
+                },
+            },
+        },
+        "dialogue": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 4,
+            "items": {
+                "type": "object",
+                "additionalProperties": False,
+                "required": ["speaker", "text", "translation"],
+                "properties": {
+                    "speaker": {"type": "string", "enum": list(DIALOGUE_SPEAKERS)},
+                    "text": {"type": "string"},
+                    "translation": {"type": "string"},
                 },
             },
         },
