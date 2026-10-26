@@ -27,6 +27,10 @@ VALID_ANALYSIS = {
     "source_meaning_in_context": "To manage a small business.",
     "source_explanation": "Run is often used for being in charge of a company.",
     "pitfall": "Não traduza como correr quando o assunto é uma empresa.",
+    "pitfall_wrong": None,
+    "pitfall_right": None,
+    "literal": None,
+    "imagine": "Alguém no balcão, cuidando de tudo na própria loja.",
     "collocations": ["run a business", "run the show"],
     "synonyms": ["manage", "operate"],
     "antonyms": [],
@@ -35,5 +39,13 @@ VALID_ANALYSIS = {
     "contexts": [
         {"context": "Work meeting", "fits": True, "alternative": None},
         {"context": "Contract", "fits": False, "alternative": "operate"},
+    ],
+    "dialogue": [
+        {"speaker": "A", "text": "What does your aunt do?", "translation": "O que sua tia faz?"},
+        {
+            "speaker": "B",
+            "text": "She runs a bakery downtown.",
+            "translation": "Ela administra uma padaria no centro.",
+        },
     ],
 }

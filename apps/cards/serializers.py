@@ -9,6 +9,15 @@ class RevealSerializer(StrictSerializer):
     revealed = serializers.BooleanField()
 
 
+def mistake(analysis: dict) -> dict | None:
+    wrong = analysis.get("pitfall_wrong")
+    right = analysis.get("pitfall_right")
+    if not wrong or not right:
+        return None
+
+    return {"wrong": wrong, "right": right}
+
+
 class CardSerializer(serializers.BaseSerializer):
     def to_representation(self, card):
         analysis = card.analysis
@@ -24,7 +33,10 @@ class CardSerializer(serializers.BaseSerializer):
                 "in_context": analysis.get("meaning_in_context"),
                 "explanation": analysis.get("explanation"),
                 "pitfall": analysis.get("pitfall"),
+                "literal": analysis.get("literal"),
+                "imagine": analysis.get("imagine"),
             },
+            "mistake": mistake(analysis),
             "examples": [
                 {"text": example["original"], "translation": example["translation"]}
                 for example in analysis.get("examples", [])
@@ -41,6 +53,14 @@ class CardSerializer(serializers.BaseSerializer):
                     "alternative": usage["alternative"],
                 }
                 for usage in analysis.get("contexts", [])
+            ],
+            "dialogue": [
+                {
+                    "speaker": line["speaker"],
+                    "text": line["text"],
+                    "translation": line["translation"],
+                }
+                for line in analysis.get("dialogue", [])
             ],
         }
 

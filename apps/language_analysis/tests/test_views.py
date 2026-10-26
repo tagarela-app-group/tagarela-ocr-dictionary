@@ -28,7 +28,7 @@ class LanguageAnalysisViewTests(APITestCase):
         service_class.return_value.analyze.return_value = {
             "input": self.payload(),
             "analysis": VALID_ANALYSIS,
-            "metadata": {"model": "gemini-3.5-flash-lite", "prompt_version": "2.1"},
+            "metadata": {"model": "gemini-3.5-flash-lite", "prompt_version": "2.2"},
         }
 
         response = self.client.post(URL, self.payload(), format="json")
@@ -53,7 +53,7 @@ class LanguageAnalysisViewTests(APITestCase):
                 "level": None,
             },
             "analysis": VALID_ANALYSIS,
-            "metadata": {"model": "gemini-3.5-flash-lite", "prompt_version": "2.1"},
+            "metadata": {"model": "gemini-3.5-flash-lite", "prompt_version": "2.2"},
         }
         response = self.client.post(URL, {"text": "run"}, format="json")
 
