@@ -127,6 +127,11 @@ class TermDetailTests(TermCardApiTestCase):
                     "pitfall": "Não traduza como correr quando o assunto é uma empresa.",
                     "literal": None,
                     "imagine": "Alguém no balcão, cuidando de tudo na própria loja.",
+                    "formality_note": "Tranquilo numa conversa e no trabalho.",
+                    "fits": [
+                        {"context": "Reunião de trabalho", "fits": True, "alternative": None},
+                        {"context": "Contrato", "fits": False, "alternative": "operate"},
+                    ],
                 },
                 "mistake": None,
                 "examples": [
@@ -192,6 +197,8 @@ class TermDetailTests(TermCardApiTestCase):
                 "source_imagine",
                 "source_formality_note",
                 "source_contexts",
+                "formality_note",
+                "contexts",
                 "dialogue",
             }
         }
@@ -206,6 +213,8 @@ class TermDetailTests(TermCardApiTestCase):
         self.assertEqual(card["dialogue"], [])
         self.assertIsNone(card["formality_note"])
         self.assertEqual(card["fits"], [])
+        self.assertIsNone(card["base"]["formality_note"])
+        self.assertEqual(card["base"]["fits"], [])
 
     def test_next_opens_read_the_saved_card(self):
         term = make_term(self.user, "on the fence")
@@ -325,6 +334,24 @@ class RevealTermTests(TermCardApiTestCase):
         card = TermCard.objects.get()
         self.assertTrue(card.pitfall_revealed)
         self.assertFalse(card.revealed)
+
+    def test_formality_note_is_revealed_on_its_own(self):
+        term = make_term(self.user, "gap")
+        self.assertFalse(self.client.get(self.url(term)).json()["formality_revealed"])
+
+        response = self.reveal(term, formality_revealed=True)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["formality_revealed"])
+        self.assertFalse(response.json()["revealed"])
+        self.assertFalse(response.json()["pitfall_revealed"])
+        card = TermCard.objects.get()
+        self.assertTrue(card.formality_revealed)
+        self.assertFalse(card.pitfall_revealed)
+
+        self.reveal(term, formality_revealed=False)
+
+        self.assertFalse(TermCard.objects.get().formality_revealed)
 
     def test_empty_body_returns_400(self):
         term = make_term(self.user, "gap")

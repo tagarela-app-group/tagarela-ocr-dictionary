@@ -36,7 +36,7 @@ class LinguisticAnalysisServiceTests(SimpleTestCase):
 
         self.assertEqual(result["analysis"], VALID_ANALYSIS)
         self.assertEqual(
-            result["metadata"], {"model": "gemini-3.5-flash-lite", "prompt_version": "2.5"}
+            result["metadata"], {"model": "gemini-3.5-flash-lite", "prompt_version": "2.6"}
         )
         self.assertIn('"selected_term":"run"', provider.prompt)
 
