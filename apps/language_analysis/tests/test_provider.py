@@ -67,3 +67,22 @@ class GeminiProviderTests(SimpleTestCase):
 
         with self.assertRaises(GeminiUnavailableError):
             GeminiProvider(client).analyze("prompt")
+
+    @override_settings(GEMINI_API_KEY="key", GEMINI_MODEL="configured-model")
+    def test_generates_with_the_given_instruction_and_schema(self):
+        client = Mock()
+        client.interactions.create.return_value = SimpleNamespace(output_text='{"items": []}')
+        schema = {"type": "object", "properties": {"items": {"type": "array"}}}
+
+        result = GeminiProvider(client).generate(
+            "prompt", system_instruction="rules", schema=schema
+        )
+
+        self.assertEqual(result, {"items": []})
+        client.interactions.create.assert_called_once_with(
+            model="configured-model",
+            input="prompt",
+            system_instruction="rules",
+            response_format={"type": "text", "mime_type": "application/json", "schema": schema},
+            store=False,
+        )

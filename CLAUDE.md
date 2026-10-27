@@ -9,7 +9,9 @@ Backend Django REST do Tagarela (app Flutter em `../mob`). Guarda conta, captura
 - Curso: "aprende X por meio de Y" (en, es, pt; X ≠ Y). O app fica no Y do curso ativo, então Y só pode ser idioma em que o app está traduzido. Conta tem vários, um ativo; mesmo X com outro Y é outro curso. Capturas, termos e grupos vivem no curso. Rotas de estudo usam o curso ativo; conta sem curso ganha inglês por meio do português.
 - Captura: texto que a pessoa revisa, marca termos e confirma; termos confirmados vão pro vocabulário do curso da captura. O app manda o curso em que ela nasceu (offline first).
 - Vocabulário: termo único por curso, organizado em grupos que só a pessoa cria. IA nunca organiza.
-- App já espera e falta: revisão espaçada, palavra do dia, exercícios da ficha.
+- App já espera e falta: palavra do dia e revisão espaçada de verdade (a de hoje é provisória).
+- Exercícios (minigames, `exercises`): a IA gera por termo e tipo (`kind`) de 1 a `EXERCISE_VARIATIONS` variações numa chamada só, na 1ª vez que alguém pede; ficam salvas e não regeneram. Usa o significado da ficha, quando existe. Só o que é exemplo vai no idioma aprendido (frase, resposta, o que ouvir); tradução e explicação vão no idioma base, com o idioma aprendido entre `*asteriscos*`. Todo exercício ensina algo além do termo (`extra`). Contrato e como criar tipo novo: `docs/exercises.md`.
+- Revisão (`reviews`), provisória pra teste: termo abaixo do nível 5 está pendente; cada revisão sobe 1 nível, ver a resposta não sobe; nível 5 = dominado. Sessão: até `REVIEW_SESSION_SIZE` termos do curso ativo, menos revisados primeiro, embaralhados, tipo sorteado entre os que o app manda em `kinds` (sem `kinds`: todos). A revisão serve primeiro a variação menos usada. A regra mora em `reviews/policy.py`: a repetição espaçada troca só ela; `ReviewAttempt` já guarda o histórico.
 - Análise linguística: recebe texto e termo opcional, consulta Gemini sem persistir resultados e devolve uma ficha estruturada.
 - Ficha do termo (`cards`): gerada pela análise na 1ª abertura, com a captura mais recente do termo como contexto e os idiomas do curso; fica salva e não regenera. Frente, palavras, formalidade, situações, armadilha (texto e formas errada e certa), imagem pra lembrar e falas do diálogo no idioma que a pessoa aprende; verso (tradução, explicação), ao pé da letra e tradução dos exemplos e do diálogo no idioma base. Armadilha, imagem, nota de formalidade e situações também seguem no idioma base (`base.pitfall`, `base.imagine`, `base.formality_note`, `base.fits`); o app mostra essas, as do idioma aprendido ficam pra não quebrar o contrato. Formalidade, situações e formas errada e certa da armadilha no idioma aprendido vêm de `source_formality_note`, `source_contexts`, `source_pitfall_wrong` e `source_pitfall_right`; os campos sem prefixo ficam como estão, porque sem o prefixo `source_` o Gemini ignora o pedido de idioma. Em `pitfall`, `imagine` e `formality_note` (idioma base), o que está no idioma aprendido vem entre asteriscos (`*on the fence*`) pro app destacar; ficha antiga vem sem. Enche `Term.translation`. O que a pessoa revelou fica salvo: `revealed` (pra lembrar), `pitfall_revealed` (armadilha) e `formality_revealed` (nota de formalidade), cada um no seu campo pra um não entregar o outro.
 
@@ -27,12 +29,13 @@ Backend Django REST do Tagarela (app Flutter em `../mob`). Guarda conta, captura
 9. Nunca commitar direto em `develop`/`main`. `develop` → `main` só o usuário.
 10. Dependência nova: checar manutenção e contar ao usuário; nativa ou pesada: perguntar.
 11. Fim de task/troca de assunto: sugerir `/compact manter: ...` ou `/clear`.
+12. Tipagem estrita em código novo/alterado: sem `Any`; parâmetros e retornos anotados. Dado de fora (JSON, IA) entra como `object`/`Mapping[str, object]` e vira tipo de verdade (serializer, `TypedDict`, dataclass) antes de circular.
 
 ## Arquitetura
 
-- Monólito modular, um app por responsabilidade em `apps/`; Postgres é a verdade. Dependências só descem (`cards` → `captures` → `vocabulary` → `courses` → `common`; `cards` → `language_analysis`).
+- Monólito modular, um app por responsabilidade em `apps/`; Postgres é a verdade. Dependências só descem (`reviews` → `exercises` → `cards` → `captures` → `vocabulary` → `courses` → `common`; `cards` e `exercises` → `language_analysis`).
 - Camadas: view fina (serializer valida, service faz, `Response`), regra de negócio só em service, lib externa só em `providers/`.
-- `language_analysis` usa `GeminiProvider`; o endpoint exige a autenticação padrão e não mantém histórico de interações.
+- IA: `GeminiProvider.generate(prompt, system_instruction=, schema=)` (em `language_analysis`) é o único ponto com o Gemini; cada uso traz o próprio prompt e schema, e a resposta passa por serializer antes de salvar. Campo no idioma aprendido leva prefixo `source_`, no idioma base `target_`: sem prefixo o Gemini ignora o pedido de idioma. O endpoint de análise exige a autenticação padrão e não mantém histórico de interações.
 - Toda entrada passa por serializer estrito (campo desconhecido = 400).
 - Auth: allauth headless isolado em `accounts` e `config`; resto do app usa `get_user_model()`. Rotas exigem login por padrão.
 - Captura é offline first: o app gera o id, a API sincroniza de forma idempotente e soft delete propaga entre aparelhos.
