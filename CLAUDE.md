@@ -5,8 +5,8 @@ Backend Django REST do Tagarela (app Flutter em `../mob`). Guarda conta, captura
 ## Produto
 
 - Conta: um e-mail = uma pessoa, entra por senha, Google ou Apple.
-- País de origem fica na conta (ISO alpha-2 + `XK`, opcional) e vira bandeira no avatar. Não é idioma: idioma da interface é escolha do aparelho, a API não guarda.
-- Curso: "aprende X por meio de Y" (en, es, pt; X ≠ Y). Conta tem vários, um ativo; mesmo X com outro Y é outro curso. Capturas, termos e grupos vivem no curso. Rotas de estudo usam o curso ativo; conta sem curso ganha inglês por meio do português.
+- País de origem fica na conta (ISO alpha-2 + `XK`, opcional) e vira bandeira no avatar. Não é idioma.
+- Curso: "aprende X por meio de Y" (en, es, pt; X ≠ Y). O app fica no Y do curso ativo, então Y só pode ser idioma em que o app está traduzido. Conta tem vários, um ativo; mesmo X com outro Y é outro curso. Capturas, termos e grupos vivem no curso. Rotas de estudo usam o curso ativo; conta sem curso ganha inglês por meio do português.
 - Captura: texto que a pessoa revisa, marca termos e confirma; termos confirmados vão pro vocabulário do curso da captura. O app manda o curso em que ela nasceu (offline first).
 - Vocabulário: termo único por curso, organizado em grupos que só a pessoa cria. IA nunca organiza.
 - App já espera e falta: revisão espaçada, palavra do dia, exercícios da ficha.
