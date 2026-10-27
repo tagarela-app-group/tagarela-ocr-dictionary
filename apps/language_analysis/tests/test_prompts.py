@@ -27,3 +27,12 @@ class SystemPromptTests(SimpleTestCase):
         )
         self.assertIn("source_imagine, write the same image in the source language", SYSTEM_PROMPT)
         self.assertIn("dialogue of two to four lines between speakers A and B", SYSTEM_PROMPT)
+
+    def test_marks_the_language_being_learned_inside_base_texts(self):
+        self.assertIn(
+            "In pitfall, imagine and formality_note, wrap every word or phrase written in the source",
+            SYSTEM_PROMPT,
+        )
+        self.assertIn(
+            "asterisks, like *on the fence*, and use asterisks for nothing else", SYSTEM_PROMPT
+        )

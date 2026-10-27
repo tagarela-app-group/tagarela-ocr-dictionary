@@ -8,6 +8,7 @@ from apps.vocabulary.models import Group
 class RevealSerializer(StrictSerializer):
     revealed = serializers.BooleanField(required=False)
     pitfall_revealed = serializers.BooleanField(required=False)
+    formality_revealed = serializers.BooleanField(required=False)
 
     def validate(self, attrs):
         if not attrs:
@@ -23,6 +24,17 @@ def mistake(analysis: dict) -> dict | None:
         return None
 
     return {"wrong": wrong, "right": right}
+
+
+def fits(contexts: list[dict]) -> list[dict]:
+    return [
+        {
+            "context": usage["context"],
+            "fits": usage["fits"],
+            "alternative": usage["alternative"],
+        }
+        for usage in contexts
+    ]
 
 
 class CardSerializer(serializers.BaseSerializer):
@@ -44,6 +56,8 @@ class CardSerializer(serializers.BaseSerializer):
                 "pitfall": analysis.get("pitfall"),
                 "literal": analysis.get("literal"),
                 "imagine": analysis.get("imagine"),
+                "formality_note": analysis.get("formality_note"),
+                "fits": fits(analysis.get("contexts", [])),
             },
             "mistake": mistake(analysis),
             "examples": [
@@ -55,14 +69,7 @@ class CardSerializer(serializers.BaseSerializer):
             "antonyms": analysis.get("antonyms", []),
             "formality": analysis.get("formality"),
             "formality_note": analysis.get("source_formality_note"),
-            "fits": [
-                {
-                    "context": usage["context"],
-                    "fits": usage["fits"],
-                    "alternative": usage["alternative"],
-                }
-                for usage in analysis.get("source_contexts", [])
-            ],
+            "fits": fits(analysis.get("source_contexts", [])),
             "dialogue": [
                 {
                     "speaker": line["speaker"],
@@ -109,6 +116,7 @@ class TermDetailSerializer(serializers.BaseSerializer):
             "group": term.group and CardGroupSerializer(term.group).data,
             "revealed": card.revealed,
             "pitfall_revealed": card.pitfall_revealed,
+            "formality_revealed": card.formality_revealed,
             "card": CardSerializer(card).data,
             "captures": CardCaptureSerializer(detail["captures"], many=True).data,
         }

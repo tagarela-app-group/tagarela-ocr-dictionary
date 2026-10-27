@@ -12,6 +12,7 @@ class TermCard(models.Model):
     model = models.CharField(max_length=100)
     revealed = models.BooleanField(default=False)
     pitfall_revealed = models.BooleanField(default=False)
+    formality_revealed = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
