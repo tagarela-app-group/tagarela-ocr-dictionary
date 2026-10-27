@@ -31,6 +31,8 @@ INSTALLED_APPS = [
     "apps.vocabulary",
     "apps.language_analysis",
     "apps.cards",
+    "apps.exercises",
+    "apps.reviews",
 ]
 
 MIDDLEWARE = [
@@ -143,6 +145,8 @@ GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.5-flash-lite")
 GEMINI_TIMEOUT = int(os.environ.get("GEMINI_TIMEOUT", "30"))
 
 TERM_CARD_MAX_CAPTURES = int(os.environ.get("TERM_CARD_MAX_CAPTURES", "10"))
+EXERCISE_VARIATIONS = int(os.environ.get("EXERCISE_VARIATIONS", "3"))
+REVIEW_SESSION_SIZE = int(os.environ.get("REVIEW_SESSION_SIZE", "10"))
 
 REST_FRAMEWORK = {
     "DEFAULT_RENDERER_CLASSES": [

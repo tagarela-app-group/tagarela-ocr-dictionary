@@ -1,4 +1,5 @@
 import json
+from collections.abc import Mapping
 from typing import Any
 
 import httpx
@@ -170,6 +171,13 @@ class GeminiProvider:
         self.client = client
 
     def analyze(self, prompt: str) -> dict[str, Any]:
+        return self.generate(
+            prompt, system_instruction=SYSTEM_PROMPT, schema=ANALYSIS_RESPONSE_SCHEMA
+        )
+
+    def generate(
+        self, prompt: str, *, system_instruction: str, schema: Mapping[str, object]
+    ) -> dict[str, object]:
         if not settings.GEMINI_API_KEY:
             raise GeminiConfigurationError
 
@@ -177,11 +185,11 @@ class GeminiProvider:
             interaction = self._client().interactions.create(
                 model=settings.GEMINI_MODEL,
                 input=prompt,
-                system_instruction=SYSTEM_PROMPT,
+                system_instruction=system_instruction,
                 response_format={
                     "type": "text",
                     "mime_type": "application/json",
-                    "schema": ANALYSIS_RESPONSE_SCHEMA,
+                    "schema": schema,
                 },
                 store=False,
             )
