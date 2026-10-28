@@ -41,17 +41,19 @@ class CaptureApiTestCase(APITestCase):
 
 
 class CreateCaptureTests(CaptureApiTestCase):
-    def test_text_capture_is_born_ready(self):
-        response = self.create()
+    def test_any_source_with_text_from_the_app_is_born_ready(self):
+        for source in ("text", "photo", "audio"):
+            with self.subTest(source=source):
+                response = self.create(source=source)
 
-        self.assertEqual(response.status_code, 201)
-        body = response.json()
-        self.assertEqual(body["status"], "ready")
-        self.assertEqual(body["text"], TEXT)
-        self.assertEqual(body["original_text"], TEXT)
-        self.assertEqual(body["terms"], [])
-        self.assertIsNotNone(body["processed_at"])
-        self.assertEqual(Capture.objects.get().user, self.user)
+                self.assertEqual(response.status_code, 201)
+                body = response.json()
+                self.assertEqual(body["status"], "ready")
+                self.assertEqual(body["text"], TEXT)
+                self.assertEqual(body["original_text"], TEXT)
+                self.assertEqual(body["terms"], [])
+                self.assertIsNotNone(body["processed_at"])
+                self.assertEqual(Capture.objects.get(id=body["id"]).user, self.user)
 
     def test_same_id_again_returns_the_existing_capture(self):
         capture_id = str(uuid.uuid4())
@@ -82,18 +84,6 @@ class CreateCaptureTests(CaptureApiTestCase):
                 self.assertEqual(response.json(), {"text": ["Escreva o texto da captura."]})
 
         self.assertFalse(Capture.objects.exists())
-
-    def test_photo_and_audio_with_text_from_the_app_are_born_ready(self):
-        for source in ("photo", "audio"):
-            with self.subTest(source=source):
-                response = self.create(source=source)
-
-                self.assertEqual(response.status_code, 201)
-                body = response.json()
-                self.assertEqual(body["status"], "ready")
-                self.assertEqual(body["text"], TEXT)
-                self.assertEqual(body["original_text"], TEXT)
-                self.assertIsNotNone(body["processed_at"])
 
     def test_photo_with_blank_text_returns_400(self):
         response = self.create(source="photo", text="")

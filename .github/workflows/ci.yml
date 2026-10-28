@@ -78,6 +78,16 @@ jobs:
           path: coverage.xml
           retention-days: 7
 
+  repeticao:
+    name: Código repetido
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: jscpd
+        run: npx --yes jscpd@5.4.1 apps config --format python --ignore "**/migrations/**" --threshold 0 --reporters console-full
+
   vulnerabilidades:
     name: Dependências vulneráveis
     runs-on: ubuntu-latest

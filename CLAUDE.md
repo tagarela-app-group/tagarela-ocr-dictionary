@@ -30,10 +30,11 @@ Backend Django REST do Tagarela (app Flutter em `../mob`). Guarda conta, captura
 10. Dependência nova: checar manutenção e contar ao usuário; nativa ou pesada: perguntar.
 11. Fim de task/troca de assunto: sugerir `/compact manter: ...` ou `/clear`.
 12. Tipagem estrita em código novo/alterado: sem `Any`; parâmetros e retornos anotados. Dado de fora (JSON, IA) entra como `object`/`Mapping[str, object]` e vira tipo de verdade (serializer, `TypedDict`, dataclass) antes de circular.
+13. Sem repetição: antes de escrever, procurar o que já existe em `apps/` e nos testes. Código igual em 2 lugares vira uma peça só, no lugar certo (service, `common/`, helper de teste). Igual por acaso, com regra diferente, fica separado. Repetição antiga no arquivo mexido: avisar e propor extrair. A esteira roda o `jscpd` e falha com qualquer trecho repetido.
 
 ## Arquitetura
 
-- Monólito modular, um app por responsabilidade em `apps/`; Postgres é a verdade. Dependências só descem (`reviews` → `exercises` → `cards` → `captures` → `vocabulary` → `courses` → `common`; `cards` e `exercises` → `language_analysis`).
+- Monólito modular, um app por responsabilidade em `apps/`; Postgres é a verdade. Dependências só descem (`reviews` → `exercises` → `cards` → `captures` → `vocabulary` → `courses` → `common`; `cards` e `exercises` → `language_analysis`; `accounts` e `language_analysis` só usam `common`). Testes podem subir. `apps/common/tests/test_architecture.py` cobra; app novo entra no `LAYERS`.
 - Camadas: view fina (serializer valida, service faz, `Response`), regra de negócio só em service, lib externa só em `providers/`.
 - IA: `GeminiProvider.generate(prompt, system_instruction=, schema=)` (em `language_analysis`) é o único ponto com o Gemini; cada uso traz o próprio prompt e schema, e a resposta passa por serializer antes de salvar. Campo no idioma aprendido leva prefixo `source_`, no idioma base `target_`: sem prefixo o Gemini ignora o pedido de idioma. O endpoint de análise exige a autenticação padrão e não mantém histórico de interações.
 - Toda entrada passa por serializer estrito (campo desconhecido = 400).
@@ -50,4 +51,4 @@ Backend Django REST do Tagarela (app Flutter em `../mob`). Guarda conta, captura
 
 ## Comandos
 
-Subir: `README.md`. No container (`docker compose exec api ...`): `python manage.py test -v 0`, `python manage.py makemigrations`. Fora: `ruff format .`, `ruff check --fix .`. Antes do push: ruff, testes, `makemigrations --check --dry-run`.
+Subir: `README.md`. No container (`docker compose exec api ...`): `python manage.py test -v 0`, `python manage.py makemigrations`. Fora: `ruff format .`, `ruff check --fix .`, `npx jscpd@5.4.1 apps config --format python --ignore "**/migrations/**" --threshold 0`. Antes do push: ruff, testes, `makemigrations --check --dry-run`.
