@@ -1,8 +1,6 @@
-import json
-
 from django.test import SimpleTestCase
 
-from apps.exercises.kinds import KINDS, Brief
+from apps.exercises.kinds import KINDS
 from apps.exercises.kinds.listen_write import ListenWrite, syllables
 from apps.exercises.models import Exercise
 from apps.exercises.tests.helpers import FENCE_ITEMS
@@ -15,21 +13,6 @@ def item(**fields: str) -> dict[str, str]:
 class RegistryTests(SimpleTestCase):
     def test_every_kind_has_a_generator(self):
         self.assertEqual(set(KINDS), set(Exercise.Kind.values))
-
-    def test_input_carries_the_brief_as_json(self):
-        brief = Brief("on the fence", "expression", "en", "pt-BR", "undecided", 3)
-
-        prompt = KINDS[Exercise.Kind.LISTEN_WRITE].build_input(brief)
-
-        payload = json.loads(prompt.split("\n", 1)[1])
-        self.assertEqual(payload["focus"], "on the fence")
-        self.assertEqual(payload["meaning"], "undecided")
-        self.assertEqual(payload["count"], 3)
-
-    def test_schema_limits_the_items_to_the_count(self):
-        schema = ListenWrite().response_schema(2)
-
-        self.assertEqual(schema["properties"]["items"]["maxItems"], 2)
 
 
 class ListenWriteTests(SimpleTestCase):

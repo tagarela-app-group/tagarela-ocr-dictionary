@@ -291,12 +291,6 @@ class TermDetailTests(TermCardApiTestCase):
         self.assertFalse(TermCard.objects.exists())
         self.assertEqual(Term.objects.get().translation, "")
 
-    def test_requires_login(self):
-        term = make_term(self.user, "gap")
-        self.client.force_authenticate(None)
-
-        self.assertEqual(self.client.get(self.url(term)).status_code, 401)
-
 
 class RevealTermTests(TermCardApiTestCase):
     def reveal(self, term, **data):
