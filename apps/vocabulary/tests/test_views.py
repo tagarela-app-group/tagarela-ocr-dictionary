@@ -79,11 +79,6 @@ class VocabularyTests(VocabularyApiTestCase):
 
         self.assertEqual(response.json(), {"groups": [], "ungrouped": []})
 
-    def test_requires_login(self):
-        self.client.force_authenticate(None)
-
-        self.assertEqual(self.client.get(VOCABULARY).status_code, 401)
-
 
 class CreateGroupTests(VocabularyApiTestCase):
     def create(self, **data):

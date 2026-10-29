@@ -63,11 +63,6 @@ class ListCoursesTests(CourseApiTestCase):
             ],
         )
 
-    def test_requires_login(self):
-        self.client.force_authenticate(None)
-
-        self.assertEqual(self.client.get(COURSES).status_code, 401)
-
 
 class StartCourseTests(CourseApiTestCase):
     def test_creates_the_course_and_makes_it_active(self):

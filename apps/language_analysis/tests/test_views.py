@@ -37,11 +37,6 @@ class LanguageAnalysisViewTests(APITestCase):
         self.assertEqual(response.json()["analysis"], VALID_ANALYSIS)
         service_class.return_value.analyze.assert_called_once_with(self.payload())
 
-    def test_requires_login(self):
-        self.client.force_authenticate(None)
-
-        self.assertEqual(self.client.post(URL, self.payload(), format="json").status_code, 401)
-
     @patch("apps.language_analysis.views.LinguisticAnalysisService")
     def test_defaults_languages_and_level(self, service_class):
         service_class.return_value.analyze.return_value = {

@@ -106,11 +106,6 @@ class CreateCaptureTests(CaptureApiTestCase):
         self.assertEqual(response.status_code, 400)
         self.assertEqual(set(response.json()), {"id", "source", "captured_at", "text"})
 
-    def test_without_login_returns_401(self):
-        response = self.client_class().post(URL, {}, format="json")
-
-        self.assertEqual(response.status_code, 401)
-
 
 class ListCaptureTests(CaptureApiTestCase):
     def test_lists_own_captures_newest_first_without_discarded(self):

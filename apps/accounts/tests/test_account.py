@@ -56,11 +56,6 @@ class AccountTests(APITestCase):
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json(), {"email": ["Campo não permitido."]})
 
-    def test_requires_login(self):
-        self.client.force_authenticate(None)
-
-        self.assertEqual(self.patch({"country": "BR"}).status_code, 401)
-
     def test_codes_are_iso_alpha2_plus_kosovo(self):
         self.assertEqual(len(COUNTRY_CODES), 250)
         self.assertTrue({"BR", "US", "ES", "PT", "XK"} <= COUNTRY_CODES)

@@ -40,24 +40,16 @@ class LinguisticAnalysisServiceTests(SimpleTestCase):
         )
         self.assertIn('"selected_term":"run"', provider.prompt)
 
-    def test_analyzes_an_isolated_word_without_claiming_context(self):
-        result, provider = self.analyze(
-            data={"text": "run", "selected_term": None, "source_language": "auto", "level": None}
+    def test_missing_term_and_level_go_as_null(self):
+        provider = StubProvider(VALID_ANALYSIS)
+
+        result = LinguisticAnalysisService(provider).analyze(
+            {"text": "run", "source_language": "auto", "target_language": "pt-BR"}
         )
 
-        self.assertEqual(result["input"]["text"], "run")
-        self.assertIn('"source_language":"auto"', provider.prompt)
-
-    def test_passes_an_idiomatic_expression_as_untrusted_input(self):
-        _, provider = self.analyze(
-            data={
-                "text": "She told a joke to break the ice.",
-                "selected_term": "break the ice",
-            }
-        )
-
-        self.assertIn('"selected_term":"break the ice"', provider.prompt)
-        self.assertIn("untrusted", provider.prompt)
+        self.assertIsNone(result["input"]["selected_term"])
+        self.assertIsNone(result["input"]["level"])
+        self.assertIn('"selected_term":null', provider.prompt)
 
     def test_rejects_an_invalid_provider_response(self):
         invalid = {**VALID_ANALYSIS, "focus": "", "unexpected": "value"}

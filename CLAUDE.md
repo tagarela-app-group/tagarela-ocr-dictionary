@@ -22,7 +22,7 @@ Backend Django REST do Tagarela (app Flutter em `../mob`). Guarda conta, captura
 2. Contrato `/api/v1` é público: não quebrar. Incompatível: avisar + nova versão.
 3. Configurável (limite, URL, TTL) vira setting via env, refletido no `.env.example`. Segredo só no `.env`.
 4. Model mudou: migration junto. Nunca editar migration mergeada. Preencher dado e mudar a tabela: migrations separadas (Postgres recusa no mesmo passo). Migration de dados testa com `MigrationTestCase`.
-5. Código novo/alterado: com teste. Bug: teste que reproduz. Testes nunca usam rede real.
+5. Código novo/alterado: com teste. Bug: teste que reproduz. Testes nunca usam rede real. Teste existe pra pegar bug: cobra regra, contrato, validação e borda. Não testa cópia do código (texto de prompt, constante, valor de setting), o Django, o DRF ou lib, nem o que outro teste já cobre (login obrigatório é o padrão, coberto no `test_api_auth.py`). Antes de escrever, dizer que bug ele pegaria; nenhum, não escreve.
 6. Sem comentário em código/config. Porquê vai aqui ou no PR.
 7. Mudou regra ou decisão: atualizar aqui. Guia, não inventário: só o que o código não mostra.
 8. Git, sem perguntar: branch da `develop` (`feat/ fix/ docs/ ci/ chore/`) → commit → push → PR pra `develop`. Conventional Commits pt-BR, enxuto, sem assinatura de IA. Esteira verde: `gh pr merge <n> --repo tagarela-app-group/tagarela-ocr-dictionary --squash --delete-branch` (isolado, sem `cd`/`&&`), depois `git switch develop && git pull`.
