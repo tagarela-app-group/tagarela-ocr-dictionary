@@ -82,6 +82,7 @@ DATABASES = {
         "PASSWORD": os.environ.get("POSTGRES_PASSWORD", "tagarela"),
         "HOST": os.environ.get("POSTGRES_HOST", "localhost"),
         "PORT": os.environ.get("POSTGRES_PORT", "5432"),
+        "OPTIONS": {"connect_timeout": env_int("POSTGRES_CONNECT_TIMEOUT", 5)},
     }
 }
 
@@ -137,11 +138,12 @@ EMAIL_PORT = env_int("EMAIL_PORT", 587)
 EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
 EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
 EMAIL_USE_TLS = env_bool("EMAIL_USE_TLS", True)
+EMAIL_TIMEOUT = env_int("EMAIL_TIMEOUT", 10)
 DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "Tagarela <nao-responda@localhost>")
 
-CAPTURE_MAX_TEXT_LENGTH = env_int("CAPTURE_MAX_TEXT_LENGTH", 2000)
-CAPTURE_MAX_TERMS = env_int("CAPTURE_MAX_TERMS", 50)
-CAPTURE_MAX_TERM_LENGTH = env_int("CAPTURE_MAX_TERM_LENGTH", 100)
+CAPTURE_MAX_TEXT_LENGTH = 2000
+CAPTURE_MAX_TERMS = 50
+CAPTURE_MAX_TERM_LENGTH = 100
 CAPTURE_PAGE_SIZE = env_int("CAPTURE_PAGE_SIZE", 50)
 
 VOCABULARY_GROUP_NAME_MAX_LENGTH = env_int("VOCABULARY_GROUP_NAME_MAX_LENGTH", 30)
