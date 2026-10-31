@@ -1,7 +1,6 @@
 from django.conf import settings
 from rest_framework import status
 from rest_framework.pagination import CursorPagination
-from rest_framework.parsers import JSONParser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -20,8 +19,6 @@ class CapturePagination(CursorPagination):
 
 
 class CaptureListView(APIView):
-    parser_classes = [JSONParser]
-
     def get(self, request):
         params = CaptureListParamsSerializer(data=request.query_params)
         params.is_valid(raise_exception=True)
@@ -45,8 +42,6 @@ class CaptureListView(APIView):
 
 
 class CaptureDetailView(APIView):
-    parser_classes = [JSONParser]
-
     def get(self, request, capture_id):
         capture = CaptureService().get(request.user, capture_id)
 

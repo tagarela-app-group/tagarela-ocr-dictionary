@@ -1,5 +1,4 @@
 from rest_framework import status
-from rest_framework.parsers import JSONParser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -8,8 +7,6 @@ from apps.courses.services import CourseService
 
 
 class CourseListView(APIView):
-    parser_classes = [JSONParser]
-
     def get(self, request):
         courses = CourseService().courses(request.user)
 

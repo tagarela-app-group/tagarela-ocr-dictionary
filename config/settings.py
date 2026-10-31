@@ -1,10 +1,19 @@
 import os
 from pathlib import Path
 
+
+def env_int(name: str, default: int) -> int:
+    return int(os.environ.get(name, default))
+
+
+def env_bool(name: str, default: bool) -> bool:
+    return os.environ.get(name, str(default)).lower() in {"1", "true", "yes", "on"}
+
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "unsafe-dev-secret-key")
-DEBUG = os.environ.get("DJANGO_DEBUG", "False").lower() in {"1", "true", "yes", "on"}
+DEBUG = env_bool("DJANGO_DEBUG", False)
 ALLOWED_HOSTS = [
     host.strip()
     for host in os.environ.get("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
@@ -98,7 +107,7 @@ ACCOUNT_EMAIL_VERIFICATION_BY_CODE_ENABLED = True
 ACCOUNT_PASSWORD_RESET_BY_CODE_ENABLED = True
 ACCOUNT_LOGIN_ON_PASSWORD_RESET = True
 ACCOUNT_EMAIL_UNKNOWN_ACCOUNTS = False
-AUTH_CODE_TTL_SECONDS = int(os.environ.get("AUTH_CODE_TTL_SECONDS", str(15 * 60)))
+AUTH_CODE_TTL_SECONDS = env_int("AUTH_CODE_TTL_SECONDS", 15 * 60)
 ACCOUNT_EMAIL_VERIFICATION_BY_CODE_TIMEOUT = AUTH_CODE_TTL_SECONDS
 ACCOUNT_PASSWORD_RESET_BY_CODE_TIMEOUT = AUTH_CODE_TTL_SECONDS
 ACCOUNT_EMAIL_SUBJECT_PREFIX = "[Tagarela] "
@@ -119,34 +128,32 @@ HEADLESS_ADAPTER = "apps.accounts.adapters.HeadlessAdapter"
 HEADLESS_CLIENTS = ("app",)
 HEADLESS_TOKEN_STRATEGY = "allauth.headless.tokens.strategies.jwt.JWTTokenStrategy"
 HEADLESS_JWT_ALGORITHM = "HS256"
-HEADLESS_JWT_ACCESS_TOKEN_EXPIRES_IN = int(os.environ.get("AUTH_ACCESS_TOKEN_TTL_SECONDS", "300"))
-HEADLESS_JWT_REFRESH_TOKEN_EXPIRES_IN = int(
-    os.environ.get("AUTH_REFRESH_TOKEN_TTL_SECONDS", str(30 * 24 * 60 * 60))
-)
+HEADLESS_JWT_ACCESS_TOKEN_EXPIRES_IN = env_int("AUTH_ACCESS_TOKEN_TTL_SECONDS", 300)
+HEADLESS_JWT_REFRESH_TOKEN_EXPIRES_IN = env_int("AUTH_REFRESH_TOKEN_TTL_SECONDS", 30 * 24 * 60 * 60)
 
 EMAIL_BACKEND = os.environ.get("EMAIL_BACKEND", "django.core.mail.backends.console.EmailBackend")
 EMAIL_HOST = os.environ.get("EMAIL_HOST", "localhost")
-EMAIL_PORT = int(os.environ.get("EMAIL_PORT", "587"))
+EMAIL_PORT = env_int("EMAIL_PORT", 587)
 EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
 EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
-EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS", "True").lower() in {"1", "true", "yes", "on"}
+EMAIL_USE_TLS = env_bool("EMAIL_USE_TLS", True)
 DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "Tagarela <nao-responda@localhost>")
 
-CAPTURE_MAX_TEXT_LENGTH = int(os.environ.get("CAPTURE_MAX_TEXT_LENGTH", "2000"))
-CAPTURE_MAX_TERMS = int(os.environ.get("CAPTURE_MAX_TERMS", "50"))
-CAPTURE_MAX_TERM_LENGTH = int(os.environ.get("CAPTURE_MAX_TERM_LENGTH", "100"))
-CAPTURE_PAGE_SIZE = int(os.environ.get("CAPTURE_PAGE_SIZE", "50"))
+CAPTURE_MAX_TEXT_LENGTH = env_int("CAPTURE_MAX_TEXT_LENGTH", 2000)
+CAPTURE_MAX_TERMS = env_int("CAPTURE_MAX_TERMS", 50)
+CAPTURE_MAX_TERM_LENGTH = env_int("CAPTURE_MAX_TERM_LENGTH", 100)
+CAPTURE_PAGE_SIZE = env_int("CAPTURE_PAGE_SIZE", 50)
 
-VOCABULARY_GROUP_NAME_MAX_LENGTH = int(os.environ.get("VOCABULARY_GROUP_NAME_MAX_LENGTH", "30"))
+VOCABULARY_GROUP_NAME_MAX_LENGTH = env_int("VOCABULARY_GROUP_NAME_MAX_LENGTH", 30)
 
-LANGUAGE_ANALYSIS_MAX_TEXT_LENGTH = int(os.environ.get("LANGUAGE_ANALYSIS_MAX_TEXT_LENGTH", "3000"))
+LANGUAGE_ANALYSIS_MAX_TEXT_LENGTH = env_int("LANGUAGE_ANALYSIS_MAX_TEXT_LENGTH", 3000)
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.5-flash-lite")
-GEMINI_TIMEOUT = int(os.environ.get("GEMINI_TIMEOUT", "30"))
+GEMINI_TIMEOUT = env_int("GEMINI_TIMEOUT", 30)
 
-TERM_CARD_MAX_CAPTURES = int(os.environ.get("TERM_CARD_MAX_CAPTURES", "10"))
-EXERCISE_VARIATIONS = int(os.environ.get("EXERCISE_VARIATIONS", "3"))
-REVIEW_SESSION_SIZE = int(os.environ.get("REVIEW_SESSION_SIZE", "10"))
+TERM_CARD_MAX_CAPTURES = env_int("TERM_CARD_MAX_CAPTURES", 10)
+EXERCISE_VARIATIONS = env_int("EXERCISE_VARIATIONS", 3)
+REVIEW_SESSION_SIZE = env_int("REVIEW_SESSION_SIZE", 10)
 
 REST_FRAMEWORK = {
     "DEFAULT_RENDERER_CLASSES": [
@@ -154,8 +161,6 @@ REST_FRAMEWORK = {
     ],
     "DEFAULT_PARSER_CLASSES": [
         "rest_framework.parsers.JSONParser",
-        "rest_framework.parsers.FormParser",
-        "rest_framework.parsers.MultiPartParser",
     ],
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "allauth.headless.contrib.rest_framework.authentication.JWTTokenAuthentication",
