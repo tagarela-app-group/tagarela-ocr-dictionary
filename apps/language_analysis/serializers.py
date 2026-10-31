@@ -25,17 +25,9 @@ class LanguageAnalysisStrictSerializer(serializers.Serializer):
         return value
 
 
-class AlternativeMeaningSerializer(LanguageAnalysisStrictSerializer):
-    meaning = serializers.CharField(allow_blank=False)
-    usage_context = serializers.CharField(allow_blank=False)
-    example = serializers.CharField(allow_blank=False)
-    translation = serializers.CharField(allow_blank=False)
-
-
 class UsageExampleSerializer(LanguageAnalysisStrictSerializer):
     original = serializers.CharField(allow_blank=False)
     translation = serializers.CharField(allow_blank=False)
-    usage_context = serializers.CharField(allow_blank=False)
 
 
 class UsageContextSerializer(LanguageAnalysisStrictSerializer):
@@ -57,35 +49,23 @@ def word_list(max_length: int) -> serializers.ListField:
 
 
 class LinguisticAnalysisSerializer(LanguageAnalysisStrictSerializer):
-    focus = serializers.CharField(allow_blank=False)
-    detected_language = serializers.CharField(allow_blank=False)
     translation = serializers.CharField(allow_null=True, allow_blank=False)
     meaning_in_context = serializers.CharField(allow_null=True, allow_blank=False)
     explanation = serializers.CharField(allow_blank=False)
-    part_of_speech = serializers.CharField(allow_null=True, allow_blank=False)
-    is_ambiguous = serializers.BooleanField()
-    alternative_meanings = AlternativeMeaningSerializer(many=True, max_length=3)
     examples = UsageExampleSerializer(many=True, max_length=3)
-    usage_notes = word_list(5)
     phonetic = serializers.CharField(allow_null=True, allow_blank=False)
     source_definition = serializers.CharField(allow_null=True, allow_blank=False)
     source_meaning_in_context = serializers.CharField(allow_null=True, allow_blank=False)
     source_explanation = serializers.CharField(allow_blank=False)
     pitfall = serializers.CharField(allow_null=True, allow_blank=False)
-    pitfall_wrong = serializers.CharField(allow_null=True, allow_blank=False)
-    pitfall_right = serializers.CharField(allow_null=True, allow_blank=False)
     literal = serializers.CharField(allow_null=True, allow_blank=False)
     imagine = serializers.CharField(allow_null=True, allow_blank=False)
-    source_pitfall = serializers.CharField(allow_null=True, allow_blank=False)
     source_pitfall_wrong = serializers.CharField(allow_null=True, allow_blank=False)
     source_pitfall_right = serializers.CharField(allow_null=True, allow_blank=False)
-    source_imagine = serializers.CharField(allow_null=True, allow_blank=False)
     collocations = word_list(6)
     synonyms = word_list(5)
     antonyms = word_list(5)
     formality = serializers.ChoiceField(choices=FORMALITY_LEVELS)
     formality_note = serializers.CharField(allow_null=True, allow_blank=False)
     contexts = UsageContextSerializer(many=True, max_length=4)
-    source_formality_note = serializers.CharField(allow_null=True, allow_blank=False)
-    source_contexts = UsageContextSerializer(many=True, max_length=4)
     dialogue = DialogueLineSerializer(many=True, max_length=4)
