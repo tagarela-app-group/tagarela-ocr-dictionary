@@ -2,8 +2,8 @@ from django.conf import settings
 from rest_framework import serializers
 
 from apps.common.serializers import StrictSerializer
+from apps.common.text import clean_text
 from apps.vocabulary.models import Group, Term
-from apps.vocabulary.services import clean_text
 
 
 class GroupInputSerializer(StrictSerializer):

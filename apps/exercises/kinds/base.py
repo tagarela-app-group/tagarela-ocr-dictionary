@@ -4,6 +4,8 @@ from dataclasses import asdict, dataclass
 
 from rest_framework import serializers
 
+from apps.common.schema import json_schema
+
 type Payload = Mapping[str, object]
 
 
@@ -21,7 +23,6 @@ class ExerciseKind:
     name: str
     prompt_version: str
     system_prompt: str
-    item_schema: Mapping[str, object]
     item_serializer: type[serializers.Serializer]
 
     def build_input(self, brief: Brief) -> str:
@@ -39,7 +40,7 @@ class ExerciseKind:
                     "type": "array",
                     "minItems": 1,
                     "maxItems": count,
-                    "items": self.item_schema,
+                    "items": json_schema(self.item_serializer()),
                 }
             },
         }

@@ -10,7 +10,7 @@ from apps.courses.tests.helpers import make_course
 from apps.exercises.kinds.listen_write import PROMPT_VERSION
 from apps.exercises.models import Exercise
 from apps.exercises.tests.helpers import FENCE_ITEMS, StubProvider
-from apps.language_analysis.integrations.gemini_provider import GeminiUnavailableError
+from apps.language_analysis.providers.gemini import GeminiUnavailableError
 from apps.vocabulary.tests.helpers import make_term
 
 

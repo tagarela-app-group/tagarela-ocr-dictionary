@@ -5,7 +5,7 @@ from apps.cards.models import TermCard
 from apps.cards.services import ANALYSIS_LANGUAGES
 from apps.exercises.kinds import KINDS, Brief
 from apps.exercises.models import Exercise
-from apps.language_analysis.integrations.gemini_provider import (
+from apps.language_analysis.providers.gemini import (
     GeminiInvalidResponseError,
     GeminiProvider,
 )
