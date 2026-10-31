@@ -1,6 +1,7 @@
 from django.test import SimpleTestCase, override_settings
 
 from apps.language_analysis.integrations.gemini_provider import GeminiInvalidResponseError
+from apps.language_analysis.prompts.linguistic_analysis import PROMPT_VERSION
 from apps.language_analysis.services import LinguisticAnalysisService
 from apps.language_analysis.tests.helpers import VALID_ANALYSIS
 
@@ -36,12 +37,12 @@ class LinguisticAnalysisServiceTests(SimpleTestCase):
 
         self.assertEqual(result["analysis"], VALID_ANALYSIS)
         self.assertEqual(
-            result["metadata"], {"model": "gemini-3.5-flash-lite", "prompt_version": "2.6"}
+            result["metadata"], {"model": "gemini-3.5-flash-lite", "prompt_version": PROMPT_VERSION}
         )
         self.assertIn('"selected_term":"run"', provider.prompt)
 
     def test_rejects_an_invalid_provider_response(self):
-        invalid = {**VALID_ANALYSIS, "focus": "", "unexpected": "value"}
+        invalid = {**VALID_ANALYSIS, "explanation": "", "unexpected": "value"}
 
         with self.assertRaises(GeminiInvalidResponseError):
             self.analyze(response=invalid)
@@ -50,8 +51,6 @@ class LinguisticAnalysisServiceTests(SimpleTestCase):
         for field, value in (
             ("formality", "casual"),
             ("contexts", None),
-            ("source_contexts", None),
-            ("source_formality_note", ""),
             ("phonetic", ""),
             ("literal", ""),
             ("dialogue", [{"speaker": "C", "text": "Hi.", "translation": "Oi."}]),

@@ -46,8 +46,6 @@ class CardSerializer(serializers.BaseSerializer):
                 "definition": analysis.get("source_definition"),
                 "in_context": analysis.get("source_meaning_in_context"),
                 "explanation": analysis.get("source_explanation"),
-                "pitfall": analysis.get("source_pitfall"),
-                "imagine": analysis.get("source_imagine"),
             },
             "base": {
                 "translation": analysis.get("translation"),
@@ -68,8 +66,6 @@ class CardSerializer(serializers.BaseSerializer):
             "synonyms": analysis.get("synonyms", []),
             "antonyms": analysis.get("antonyms", []),
             "formality": analysis.get("formality"),
-            "formality_note": analysis.get("source_formality_note"),
-            "fits": fits(analysis.get("source_contexts", [])),
             "dialogue": [
                 {
                     "speaker": line["speaker"],

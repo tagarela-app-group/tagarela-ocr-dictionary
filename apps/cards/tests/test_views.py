@@ -117,8 +117,6 @@ class TermDetailTests(TermCardApiTestCase):
                     "definition": "to manage or operate",
                     "in_context": "To manage a small business.",
                     "explanation": "Run is often used for being in charge of a company.",
-                    "pitfall": "Run a business is not about speed.",
-                    "imagine": "Someone behind the counter, taking care of their own shop.",
                 },
                 "base": {
                     "translation": "administrar",
@@ -144,11 +142,6 @@ class TermDetailTests(TermCardApiTestCase):
                 "synonyms": ["manage", "operate"],
                 "antonyms": [],
                 "formality": "neutral",
-                "formality_note": "Fine in conversation and at work.",
-                "fits": [
-                    {"context": "Work meeting", "fits": True, "alternative": None},
-                    {"context": "Contract", "fits": False, "alternative": "operate"},
-                ],
                 "dialogue": [
                     {
                         "speaker": "A",
@@ -167,8 +160,6 @@ class TermDetailTests(TermCardApiTestCase):
     def test_wrong_and_right_forms_become_a_mistake(self):
         self.analysis.analysis = {
             **VALID_ANALYSIS,
-            "pitfall_wrong": "em cima do muro",
-            "pitfall_right": "em cima do muro",
             "source_pitfall_wrong": "on the wall",
             "source_pitfall_right": "on the fence",
             "literal": "na cerca",
@@ -187,16 +178,10 @@ class TermDetailTests(TermCardApiTestCase):
             for key, value in VALID_ANALYSIS.items()
             if key
             not in {
-                "pitfall_wrong",
-                "pitfall_right",
                 "literal",
                 "imagine",
-                "source_pitfall",
                 "source_pitfall_wrong",
                 "source_pitfall_right",
-                "source_imagine",
-                "source_formality_note",
-                "source_contexts",
                 "formality_note",
                 "contexts",
                 "dialogue",
@@ -208,11 +193,8 @@ class TermDetailTests(TermCardApiTestCase):
 
         self.assertEqual(self.analysis.calls, [])
         self.assertIsNone(card["base"]["literal"])
-        self.assertIsNone(card["learning"]["pitfall"])
         self.assertIsNone(card["mistake"])
         self.assertEqual(card["dialogue"], [])
-        self.assertIsNone(card["formality_note"])
-        self.assertEqual(card["fits"], [])
         self.assertIsNone(card["base"]["formality_note"])
         self.assertEqual(card["base"]["fits"], [])
 
