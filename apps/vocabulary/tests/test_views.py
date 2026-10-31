@@ -283,14 +283,13 @@ class DeleteTermsTests(VocabularyApiTestCase):
         self.assertEqual(response.json()["ungrouped"], [])
         self.assertEqual(self.client.get(VOCABULARY).json(), response.json())
 
-    def test_a_new_delete_drops_the_previous_one(self):
+    def test_a_new_delete_keeps_what_the_previous_one_deleted(self):
         old = make_term(self.user, "jet lag", deleted_at=timezone.now())
         layover = make_term(self.user, "layover")
 
         self.delete(layover)
 
-        self.assertFalse(Term.objects.filter(pk=old.pk).exists())
-        self.assertTrue(Term.objects.filter(pk=layover.pk).exists())
+        self.assertTrue(Term.objects.filter(pk=old.pk).exists())
 
     def test_term_from_another_user_or_already_deleted_returns_400(self):
         mine = make_term(self.user, "jet lag")
