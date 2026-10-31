@@ -13,6 +13,7 @@ venv
 .coverage
 coverage.xml
 htmlcov
+staticfiles
 .pytest_cache
 .mypy_cache
 .ruff_cache

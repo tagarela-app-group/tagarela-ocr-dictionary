@@ -1,24 +1,24 @@
 import os
 from pathlib import Path
 
+from config.environment import PRD, is_truthy, load_environment, split_csv
+
 
 def env_int(name: str, default: int) -> int:
     return int(os.environ.get(name, default))
 
 
 def env_bool(name: str, default: bool) -> bool:
-    return os.environ.get(name, str(default)).lower() in {"1", "true", "yes", "on"}
+    return is_truthy(os.environ.get(name, str(default)))
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+ENVIRONMENT = load_environment(os.environ)
+
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "unsafe-dev-secret-key")
 DEBUG = env_bool("DJANGO_DEBUG", False)
-ALLOWED_HOSTS = [
-    host.strip()
-    for host in os.environ.get("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
-    if host.strip()
-]
+ALLOWED_HOSTS = split_csv(os.environ.get("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1"))
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -82,7 +82,10 @@ DATABASES = {
         "PASSWORD": os.environ.get("POSTGRES_PASSWORD", "tagarela"),
         "HOST": os.environ.get("POSTGRES_HOST", "localhost"),
         "PORT": os.environ.get("POSTGRES_PORT", "5432"),
-        "OPTIONS": {"connect_timeout": env_int("POSTGRES_CONNECT_TIMEOUT", 5)},
+        "OPTIONS": {
+            "connect_timeout": env_int("POSTGRES_CONNECT_TIMEOUT", 5),
+            "sslmode": os.environ.get("POSTGRES_SSLMODE", "prefer"),
+        },
     }
 }
 
@@ -178,4 +181,16 @@ USE_I18N = True
 USE_TZ = True
 
 STATIC_URL = "static/"
+STATIC_ROOT = BASE_DIR / "staticfiles"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+if ENVIRONMENT == PRD:
+    MIDDLEWARE.insert(1, "whitenoise.middleware.WhiteNoiseMiddleware")
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+    SECURE_SSL_REDIRECT = True
+    SECURE_REDIRECT_EXEMPT = [r"^health$"]
+    SECURE_HSTS_SECONDS = env_int("SECURE_HSTS_SECONDS", 365 * 24 * 60 * 60)
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
