@@ -36,7 +36,7 @@ Backend Django REST do Tagarela (app Flutter em `../mob`). Guarda conta, captura
 
 - Monólito modular, um app por responsabilidade em `apps/`; Postgres é a verdade. Dependências só descem (`reviews` → `exercises` → `cards` → `captures` → `vocabulary` → `courses` → `common`; `cards` e `exercises` → `language_analysis`; `accounts` e `language_analysis` só usam `common`). Testes podem subir. `apps/common/tests/test_architecture.py` cobra; app novo entra no `LAYERS`.
 - Camadas: view fina (serializer valida, service faz, `Response`), regra de negócio só em service, lib externa só em `providers/`.
-- IA: `GeminiProvider.generate(prompt, system_instruction=, schema=)` (em `language_analysis`) é o único ponto com o Gemini; cada uso traz o próprio prompt e schema, e a resposta passa por serializer antes de salvar. Campo no idioma aprendido leva prefixo `source_`, no idioma base `target_`: sem prefixo o Gemini ignora o pedido de idioma. Toda chamada vai com `store=False`, sem histórico.
+- IA: `GeminiProvider.generate(prompt, system_instruction=, schema=)` (em `language_analysis`) é o único ponto com o Gemini; cada uso traz o próprio prompt e serializer; o schema sai do serializer (`common/schema.py`), e a resposta passa por ele antes de salvar. Campo no idioma aprendido leva prefixo `source_`, no idioma base `target_`: sem prefixo o Gemini ignora o pedido de idioma. Toda chamada vai com `store=False`, sem histórico.
 - Toda entrada passa por serializer estrito (campo desconhecido = 400).
 - Auth: allauth headless isolado em `accounts` e `config`; resto do app usa `get_user_model()`. Rotas exigem login por padrão.
 - Captura é offline first: o app gera o id, a API sincroniza de forma idempotente e soft delete propaga entre aparelhos.

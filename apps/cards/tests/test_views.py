@@ -9,7 +9,7 @@ from apps.captures.models import Capture, CaptureTerm
 from apps.captures.tests.helpers import make_capture, make_user
 from apps.cards.models import TermCard
 from apps.courses.tests.helpers import make_course
-from apps.language_analysis.integrations.gemini_provider import GeminiUnavailableError
+from apps.language_analysis.providers.gemini import GeminiUnavailableError
 from apps.language_analysis.tests.helpers import VALID_ANALYSIS
 from apps.vocabulary.models import Term
 from apps.vocabulary.tests.helpers import make_group, make_term

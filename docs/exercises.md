@@ -51,6 +51,6 @@ REVIEW_SESSION_SIZE=10
 ## Adding a kind
 
 1. Add the value to `Exercise.Kind` and run `makemigrations`.
-2. Create `apps/exercises/kinds/<kind>.py` with a subclass of `ExerciseKind`: system prompt, item schema, item serializer and `to_payload`, which turns one validated AI item into the stored payload (or `None` to drop it). Name learning-language fields `source_*` and base-language fields `target_*`.
+2. Create `apps/exercises/kinds/<kind>.py` with a subclass of `ExerciseKind`: system prompt, item serializer (the schema comes from it) and `to_payload`, which turns one validated AI item into the stored payload (or `None` to drop it). Name learning-language fields `source_*` and base-language fields `target_*`.
 3. Register it in `KINDS` (`apps/exercises/kinds/__init__.py`). A test fails while `Exercise.Kind` and `KINDS` differ.
 4. Document the payload here. Old apps never receive it: they only ask for the kinds they know.
