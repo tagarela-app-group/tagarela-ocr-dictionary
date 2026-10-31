@@ -20,7 +20,7 @@ Backend Django REST do Tagarela (app Flutter em `../mob`). Guarda conta, captura
 0. Início de sessão: ativar skill `caveman` nível `full`.
 1. Antes de alterar algo (código, doc, config): propor (o quê, onde, opções, recomendação) e esperar ok. Pedido fere regra/boa prática: avisar e propor alternativa. Sem camada nova sem necessidade.
 2. Contrato `/api/v1`: até o primeiro deploy, o app é o único consumidor e o contrato pode mudar sem versão nova. Campo sai da resposta: o app muda antes. Campo novo na requisição ou rota nova: a API muda antes, porque o serializer estrito devolve 400. Do primeiro deploy em diante é público: não quebrar. Incompatível: avisar + nova versão.
-3. Configurável (limite, URL, TTL) vira setting via env, refletido no `.env.example`. Segredo só no `.env`.
+3. Configurável (limite, URL, TTL) vira setting via env, refletido em `.env.dsv.example` e `.env.prd.example`. Segredo só no `.env.dsv`, no `.env.prd` ou no secret da hospedagem.
 4. Model mudou: migration junto. Do primeiro deploy em diante, nunca editar migration mergeada. Preencher dado e mudar a tabela: migrations separadas (Postgres recusa no mesmo passo). Migration de dados testa com `MigrationTestCase`.
 5. Código novo/alterado: com teste. Bug: teste que reproduz. Testes nunca usam rede real. Teste existe pra pegar bug: cobra regra, contrato, validação e borda. Não testa cópia do código (texto de prompt, constante, valor de setting), o Django, o DRF ou lib, nem o que outro teste já cobre (login obrigatório é o padrão, coberto no `test_api_auth.py`). Antes de escrever, dizer que bug ele pegaria; nenhum, não escreve.
 6. Sem comentário em código/config. Porquê vai aqui ou no PR.
@@ -41,6 +41,13 @@ Backend Django REST do Tagarela (app Flutter em `../mob`). Guarda conta, captura
 - Auth: allauth headless isolado em `accounts` e `config`; resto do app usa `get_user_model()`. Rotas exigem login por padrão.
 - Captura é offline first: o app gera o id, a API sincroniza de forma idempotente e soft delete propaga entre aparelhos.
 - Trabalho pesado (IA, processamento): decidir fila quando surgir.
+
+## Ambientes
+
+- Só dois: `dsv` (local, no compose) e `prd`. `DJANGO_ENV` é obrigatório: sem ele a API não sobe.
+- Um `settings.py` só; o que muda em prd fica no bloco final.
+- `config/environment.py` recusa subir prd com valor inseguro ou de exemplo. Segredo novo obrigatório entra lá. Domínio `.invalid` nos exemplos marca o que falta trocar.
+- Dockerfile: alvo padrão `prd`, pra hospedagem que builda sem `--target` nunca subir `runserver`; o compose usa `dsv`. `--timeout` do gunicorn acima da espera do app pela IA (45 s). Migrate em prd é passo separado. Roteiro: `docs/deploy.md`.
 
 ## Estilo
 
