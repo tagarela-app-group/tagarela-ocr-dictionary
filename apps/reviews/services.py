@@ -4,7 +4,8 @@ from django.conf import settings
 from django.db import transaction
 from django.db.models import F
 from django.http import Http404
-from rest_framework import serializers
+from rest_framework import serializers, status
+from rest_framework.exceptions import APIException
 
 from apps.courses.models import Course
 from apps.exercises.models import Exercise
@@ -13,12 +14,17 @@ from apps.reviews.policy import StepPolicy
 from apps.vocabulary.models import Term
 
 
+class AttemptConflict(APIException):
+    status_code = status.HTTP_409_CONFLICT
+    default_code = "conflict"
+
+
 class ReviewService:
     def __init__(self, policy: StepPolicy | None = None, rng: random.Random | None = None):
         self.policy = policy or StepPolicy()
         self.rng = rng or random.Random()
 
-    def session(self, course: Course, kinds: list[str]) -> dict:
+    def session(self, course: Course | None, kinds: list[str]) -> dict:
         due = self.policy.due(Term.objects.filter(course=course, deleted_at__isnull=True))
         terms = list(due.order_by("level", "created_at")[: settings.REVIEW_SESSION_SIZE])
         self.rng.shuffle(terms)
@@ -33,6 +39,12 @@ class ReviewService:
         if term is None:
             raise Http404
 
+        repeated = ReviewAttempt.objects.filter(pk=data["id"]).first()
+        if repeated is not None:
+            if repeated.term_id != term.pk:
+                raise AttemptConflict("Esse id já está em uso.")
+            return term
+
         exercise = None
         if data.get("exercise"):
             exercises = Exercise.objects.filter(term=term, kind=data["kind"])
@@ -46,6 +58,7 @@ class ReviewService:
         term.level = self.policy.level_after(term.level, data["outcome"])
         term.save(update_fields=["level"])
         ReviewAttempt.objects.create(
+            id=data["id"],
             term=term,
             exercise=exercise,
             kind=data["kind"],

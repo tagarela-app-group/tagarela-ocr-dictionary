@@ -1,8 +1,11 @@
+import uuid
+
 from django.test import override_settings
 from django.utils import timezone
 from rest_framework.test import APITestCase
 
 from apps.captures.tests.helpers import make_user
+from apps.courses.models import Course
 from apps.courses.tests.helpers import make_course
 from apps.exercises.models import Exercise
 from apps.reviews.models import ReviewAttempt
@@ -72,6 +75,12 @@ class ReviewSessionTests(APITestCase):
         self.assertEqual(session["due"], 4)
         self.assertCountEqual([r["term"]["text"] for r in session["rounds"]], ["bite", "dull"])
 
+    def test_without_course_is_empty_and_creates_nothing(self):
+        self.client.force_authenticate(make_user("bia@example.com"))
+
+        self.assertEqual(self.session(), {"due": 0, "rounds": []})
+        self.assertFalse(Course.objects.filter(user__email="bia@example.com").exists())
+
     def test_without_known_kinds_there_are_no_rounds(self):
         make_term(self.user, "awkward", course=self.course)
 
@@ -118,6 +127,30 @@ class ReviewAttemptTests(APITestCase):
         )
         self.exercise.refresh_from_db()
         self.assertEqual(self.exercise.served_count, 1)
+
+    def test_same_attempt_again_does_not_move_the_level_twice(self):
+        attempt_id = str(uuid.uuid4())
+
+        first = self.attempt(id=attempt_id)
+        again = self.attempt(id=attempt_id)
+
+        self.assertEqual(first.status_code, 201)
+        self.assertEqual(again.status_code, 201)
+        self.assertEqual(again.json()["term"]["level"], 2)
+        self.assertEqual(ReviewAttempt.objects.count(), 1)
+        self.exercise.refresh_from_db()
+        self.assertEqual(self.exercise.served_count, 1)
+
+    def test_id_used_on_another_term_returns_409(self):
+        attempt_id = str(uuid.uuid4())
+        other = make_term(self.user, "awkward", course=self.term.course)
+        self.attempt(id=attempt_id)
+
+        response = self.attempt(id=attempt_id, term=str(other.id), exercise=None)
+
+        self.assertEqual(response.status_code, 409)
+        other.refresh_from_db()
+        self.assertEqual(other.level, 0)
 
     def test_seeing_the_answer_keeps_the_level(self):
         response = self.attempt(outcome="missed")

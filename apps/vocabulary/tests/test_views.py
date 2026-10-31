@@ -283,14 +283,13 @@ class DeleteTermsTests(VocabularyApiTestCase):
         self.assertEqual(response.json()["ungrouped"], [])
         self.assertEqual(self.client.get(VOCABULARY).json(), response.json())
 
-    def test_a_new_delete_drops_the_previous_one(self):
+    def test_a_new_delete_keeps_what_the_previous_one_deleted(self):
         old = make_term(self.user, "jet lag", deleted_at=timezone.now())
         layover = make_term(self.user, "layover")
 
         self.delete(layover)
 
-        self.assertFalse(Term.objects.filter(pk=old.pk).exists())
-        self.assertTrue(Term.objects.filter(pk=layover.pk).exists())
+        self.assertTrue(Term.objects.filter(pk=old.pk).exists())
 
     def test_term_from_another_user_or_already_deleted_returns_400(self):
         mine = make_term(self.user, "jet lag")
@@ -356,12 +355,23 @@ class CourseScopeTests(VocabularyApiTestCase):
         self.assertEqual([g["name"] for g in spanish["groups"]], ["Viaje"])
         self.assertEqual([t["text"] for t in spanish["ungrouped"]], ["hola"])
 
-    def test_account_without_course_starts_english_through_portuguese(self):
+    def test_reading_without_course_is_empty_and_creates_nothing(self):
         self.client.force_authenticate(make_user("bia@example.com"))
 
         response = self.client.get(VOCABULARY)
 
         self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {"groups": [], "ungrouped": []})
+        self.assertFalse(Course.objects.filter(user__email="bia@example.com").exists())
+
+    def test_new_group_without_course_starts_english_through_portuguese(self):
+        self.client.force_authenticate(make_user("bia@example.com"))
+
+        response = self.client.post(
+            "/api/v1/groups", {"name": "Viagem", "icon": "travel", "accent": "sky"}, format="json"
+        )
+
+        self.assertEqual(response.status_code, 201)
         course = Course.objects.get(user__email="bia@example.com")
         self.assertEqual((course.learning, course.base, course.active), ("en", "pt", True))
 
