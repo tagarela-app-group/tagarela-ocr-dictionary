@@ -18,13 +18,9 @@ def vocabulary_response(service: VocabularyService, course) -> Response:
     return Response(VocabularySerializer(service.vocabulary(course)).data)
 
 
-def active_course(request):
-    return CourseService().active(request.user)
-
-
 @api_view(["GET"])
 def vocabulary(request):
-    return vocabulary_response(VocabularyService(), active_course(request))
+    return vocabulary_response(VocabularyService(), CourseService().active(request.user))
 
 
 @api_view(["POST"])
@@ -32,7 +28,9 @@ def create_group(request):
     serializer = GroupInputSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
 
-    group = VocabularyService().create_group(active_course(request), serializer.validated_data)
+    group = VocabularyService().create_group(
+        CourseService().ensure_active(request.user), serializer.validated_data
+    )
 
     return Response(GroupSerializer(group).data, status=status.HTTP_201_CREATED)
 
@@ -44,14 +42,15 @@ class GroupDetailView(APIView):
 
         service = VocabularyService()
         group = service.update_group(
-            service.group(active_course(request), group_id), serializer.validated_data
+            service.group(CourseService().active(request.user), group_id),
+            serializer.validated_data,
         )
 
         return Response(GroupSerializer(group).data)
 
     def delete(self, request, group_id):
         service = VocabularyService()
-        course = active_course(request)
+        course = CourseService().active(request.user)
         service.delete_group(service.group(course, group_id))
 
         return vocabulary_response(service, course)
@@ -63,7 +62,7 @@ def move_terms(request):
     serializer.is_valid(raise_exception=True)
 
     service = VocabularyService()
-    course = active_course(request)
+    course = CourseService().active(request.user)
     service.move(course, serializer.validated_data["terms"], serializer.validated_data["group"])
 
     return vocabulary_response(service, course)
@@ -75,7 +74,7 @@ def delete_terms(request):
     serializer.is_valid(raise_exception=True)
 
     service = VocabularyService()
-    course = active_course(request)
+    course = CourseService().active(request.user)
     service.delete_terms(course, serializer.validated_data["terms"])
 
     return vocabulary_response(service, course)
@@ -87,7 +86,7 @@ def restore_terms(request):
     serializer.is_valid(raise_exception=True)
 
     service = VocabularyService()
-    course = active_course(request)
+    course = CourseService().active(request.user)
     service.restore_terms(course, serializer.validated_data["terms"])
 
     return vocabulary_response(service, course)

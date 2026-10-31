@@ -17,13 +17,13 @@ def term_key(text: str) -> str:
 
 
 class VocabularyService:
-    def vocabulary(self, course: Course) -> dict:
+    def vocabulary(self, course: Course | None) -> dict:
         return {
             "groups": self._groups(course),
             "ungrouped": self._terms(course).filter(group__isnull=True),
         }
 
-    def group(self, course: Course, group_id) -> Group:
+    def group(self, course: Course | None, group_id) -> Group:
         group = self._groups(course).filter(pk=group_id).first()
         if group is None:
             raise Http404
@@ -41,7 +41,7 @@ class VocabularyService:
     def delete_group(self, group: Group) -> None:
         group.delete()
 
-    def move(self, course: Course, term_ids: list, group_id) -> None:
+    def move(self, course: Course | None, term_ids: list, group_id) -> None:
         group = None
         if group_id is not None:
             group = Group.objects.filter(course=course, pk=group_id).first()
@@ -51,12 +51,12 @@ class VocabularyService:
         self._owned(self._terms(course), term_ids, MISSING_TERM).update(group=group)
 
     @transaction.atomic
-    def delete_terms(self, course: Course, term_ids: list) -> None:
+    def delete_terms(self, course: Course | None, term_ids: list) -> None:
         terms = self._owned(self._terms(course), term_ids, MISSING_TERM)
 
         terms.update(deleted_at=timezone.now())
 
-    def restore_terms(self, course: Course, term_ids: list) -> None:
+    def restore_terms(self, course: Course | None, term_ids: list) -> None:
         deleted = Term.objects.filter(course=course, deleted_at__isnull=False)
 
         self._owned(deleted, term_ids, "Não dá mais pra desfazer.").update(deleted_at=None)
@@ -83,10 +83,10 @@ class VocabularyService:
             ignore_conflicts=True,
         )
 
-    def _terms(self, course: Course):
+    def _terms(self, course: Course | None):
         return Term.objects.filter(course=course, deleted_at__isnull=True)
 
-    def _groups(self, course: Course):
+    def _groups(self, course: Course | None):
         return Group.objects.filter(course=course).prefetch_related(
             Prefetch("terms", queryset=self._terms(course))
         )

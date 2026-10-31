@@ -5,6 +5,7 @@ from django.utils import timezone
 from rest_framework.test import APITestCase
 
 from apps.captures.tests.helpers import make_user
+from apps.courses.models import Course
 from apps.courses.tests.helpers import make_course
 from apps.exercises.models import Exercise
 from apps.reviews.models import ReviewAttempt
@@ -73,6 +74,12 @@ class ReviewSessionTests(APITestCase):
 
         self.assertEqual(session["due"], 4)
         self.assertCountEqual([r["term"]["text"] for r in session["rounds"]], ["bite", "dull"])
+
+    def test_without_course_is_empty_and_creates_nothing(self):
+        self.client.force_authenticate(make_user("bia@example.com"))
+
+        self.assertEqual(self.session(), {"due": 0, "rounds": []})
+        self.assertFalse(Course.objects.filter(user__email="bia@example.com").exists())
 
     def test_without_known_kinds_there_are_no_rounds(self):
         make_term(self.user, "awkward", course=self.course)

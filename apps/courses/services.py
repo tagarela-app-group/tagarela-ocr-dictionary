@@ -19,8 +19,11 @@ class CourseService:
 
         return course
 
-    def active(self, user) -> Course:
-        course = Course.objects.filter(user=user, active=True).first()
+    def active(self, user) -> Course | None:
+        return Course.objects.filter(user=user, active=True).first()
+
+    def ensure_active(self, user) -> Course:
+        course = self.active(user)
         if course is not None:
             return course
 
