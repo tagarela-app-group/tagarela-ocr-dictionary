@@ -5,6 +5,7 @@ from rest_framework import serializers, status
 from rest_framework.exceptions import APIException
 
 from apps.captures.models import Capture, CaptureTerm
+from apps.common.text import term_key
 from apps.courses.models import Course
 from apps.courses.services import CourseService
 from apps.vocabulary.services import VocabularyService
@@ -76,7 +77,8 @@ class CaptureService:
             if "terms" in data:
                 capture.terms.all().delete()
                 CaptureTerm.objects.bulk_create(
-                    CaptureTerm(capture=capture, **term) for term in data["terms"]
+                    CaptureTerm(capture=capture, key=term_key(term["text"]), **term)
+                    for term in data["terms"]
                 )
             elif "text" in data:
                 stale = [

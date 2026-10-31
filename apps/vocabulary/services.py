@@ -4,16 +4,12 @@ from django.http import Http404
 from django.utils import timezone
 from rest_framework import serializers
 
-from apps.common.text import clean_text
+from apps.common.text import clean_text, term_key
 from apps.courses.models import Course
 from apps.vocabulary.models import Group, Term
 
 DUPLICATE_GROUP = "Você já tem um grupo com esse nome."
 MISSING_TERM = "Algum termo não existe mais."
-
-
-def term_key(text: str) -> str:
-    return clean_text(text).casefold()
 
 
 class VocabularyService:

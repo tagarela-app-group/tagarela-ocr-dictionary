@@ -206,6 +206,28 @@ class TermDetailTests(TermCardApiTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(len(self.analysis.calls), 1)
 
+    def test_expression_with_extra_space_keeps_its_capture_as_context(self):
+        text = "Honestly, I'm on the\nfence about it."
+        capture = make_capture(
+            self.user,
+            course=self.course,
+            text=text,
+            status=Capture.Status.ANALYZED,
+            analyzed_at=timezone.now(),
+        )
+        CaptureTerm.objects.create(
+            capture=capture,
+            text="on the\nfence",
+            start=text.index("on the"),
+            end=text.index(" about"),
+        )
+        term = make_term(self.user, "on the fence", course=self.course)
+
+        response = self.client.get(self.url(term))
+
+        self.assertEqual(self.analysis.calls[0]["text"], text)
+        self.assertEqual([c["id"] for c in response.json()["captures"]], [str(capture.id)])
+
     def test_without_capture_the_term_is_the_context(self):
         term = make_term(self.user, "on the fence")
 
