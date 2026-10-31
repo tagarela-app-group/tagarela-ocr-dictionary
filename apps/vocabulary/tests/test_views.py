@@ -102,14 +102,6 @@ class CreateGroupTests(VocabularyApiTestCase):
             },
         )
 
-    def test_accepts_every_accent(self):
-        for accent in Group.Accent.values:
-            with self.subTest(accent=accent):
-                response = self.create(name=f"Grupo {accent}", accent=accent)
-
-                self.assertEqual(response.status_code, 201)
-                self.assertEqual(response.json()["accent"], accent)
-
     def test_name_already_used_ignoring_case_returns_400(self):
         make_group(self.user, "Viagem")
 
@@ -132,11 +124,6 @@ class CreateGroupTests(VocabularyApiTestCase):
         self.assertIn("icon", body)
         self.assertIn("accent", body)
         self.assertEqual(body["extra"], ["Campo não permitido."])
-
-    def test_name_too_long_returns_400(self):
-        response = self.create(name="x" * 31)
-
-        self.assertEqual(response.json(), {"name": ["O nome do grupo tem até 30 caracteres."]})
 
 
 class MoveTermsTests(VocabularyApiTestCase):

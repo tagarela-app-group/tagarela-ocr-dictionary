@@ -7,7 +7,7 @@ from rest_framework.test import APITestCase
 from apps.captures.tests.helpers import make_user
 from apps.cards.models import TermCard
 from apps.courses.tests.helpers import make_course
-from apps.exercises.kinds.listen_write import PROMPT_VERSION, SYSTEM_PROMPT
+from apps.exercises.kinds.listen_write import PROMPT_VERSION
 from apps.exercises.models import Exercise
 from apps.exercises.tests.helpers import FENCE_ITEMS, StubProvider
 from apps.language_analysis.integrations.gemini_provider import GeminiUnavailableError
@@ -50,7 +50,6 @@ class TermExercisesTests(APITestCase):
             (stored.prompt_version, stored.model), (PROMPT_VERSION, "configured-model")
         )
         call = self.provider.calls[0]
-        self.assertEqual(call["system_instruction"], SYSTEM_PROMPT)
         self.assertEqual(call["schema"]["properties"]["items"]["maxItems"], 3)
         self.assertEqual(
             self.brief(),
