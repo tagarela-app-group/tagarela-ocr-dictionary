@@ -53,7 +53,6 @@ class VocabularyService:
     @transaction.atomic
     def delete_terms(self, course: Course, term_ids: list) -> None:
         terms = self._owned(self._terms(course), term_ids, MISSING_TERM)
-        Term.objects.filter(course=course, deleted_at__isnull=False).delete()
 
         terms.update(deleted_at=timezone.now())
 
@@ -67,7 +66,9 @@ class VocabularyService:
         for text in texts:
             new.setdefault(term_key(text), clean_text(text))
 
-        Term.objects.filter(course=course, key__in=new, deleted_at__isnull=False).delete()
+        Term.objects.filter(course=course, key__in=new, deleted_at__isnull=False).update(
+            deleted_at=None
+        )
         Term.objects.bulk_create(
             [
                 Term(
