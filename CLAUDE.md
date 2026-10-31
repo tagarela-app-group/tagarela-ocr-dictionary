@@ -48,6 +48,7 @@ Backend Django REST do Tagarela (app Flutter em `../mob`). Guarda conta, captura
 - Nomes `<X>Service`, `<X>Provider`, `<X>Serializer`; dependências injetáveis pelo construtor.
 - Contrato só JSON, sem barra final; erros com mensagem pt-BR por campo.
 - Testes no runner do Django, em `apps/<app>/tests/`.
+- Contrato com o app: `apps/common/tests/test_app_contract.py` compara a resposta real com `test/contract/*.json` do app, na `develop`. Só roda com `APP_CONTRACT_DIR`, que a esteira define. Rota nova que o app lê entra lá.
 
 ## Comandos
 

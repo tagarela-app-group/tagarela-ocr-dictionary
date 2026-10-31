@@ -63,8 +63,18 @@ jobs:
       - name: Migration faltando
         run: python manage.py makemigrations --check --dry-run
 
+      - name: Exemplos do contrato com o app
+        uses: actions/checkout@v7
+        with:
+          repository: tagarela-app-group/tagarela
+          ref: develop
+          path: .app
+          sparse-checkout: test/contract
+
       - name: Testes
         run: coverage run manage.py test
+        env:
+          APP_CONTRACT_DIR: .app/test/contract
 
       - name: Cobertura no resumo
         run: |
