@@ -1,3 +1,5 @@
+import uuid
+
 from django.test import override_settings
 from django.utils import timezone
 from rest_framework.test import APITestCase
@@ -118,6 +120,30 @@ class ReviewAttemptTests(APITestCase):
         )
         self.exercise.refresh_from_db()
         self.assertEqual(self.exercise.served_count, 1)
+
+    def test_same_attempt_again_does_not_move_the_level_twice(self):
+        attempt_id = str(uuid.uuid4())
+
+        first = self.attempt(id=attempt_id)
+        again = self.attempt(id=attempt_id)
+
+        self.assertEqual(first.status_code, 201)
+        self.assertEqual(again.status_code, 201)
+        self.assertEqual(again.json()["term"]["level"], 2)
+        self.assertEqual(ReviewAttempt.objects.count(), 1)
+        self.exercise.refresh_from_db()
+        self.assertEqual(self.exercise.served_count, 1)
+
+    def test_id_used_on_another_term_returns_409(self):
+        attempt_id = str(uuid.uuid4())
+        other = make_term(self.user, "awkward", course=self.term.course)
+        self.attempt(id=attempt_id)
+
+        response = self.attempt(id=attempt_id, term=str(other.id), exercise=None)
+
+        self.assertEqual(response.status_code, 409)
+        other.refresh_from_db()
+        self.assertEqual(other.level, 0)
 
     def test_seeing_the_answer_keeps_the_level(self):
         response = self.attempt(outcome="missed")

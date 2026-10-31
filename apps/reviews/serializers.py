@@ -1,3 +1,5 @@
+import uuid
+
 from rest_framework import serializers
 
 from apps.common.serializers import StrictSerializer
@@ -7,6 +9,7 @@ from apps.vocabulary.serializers import TermSerializer
 
 
 class AttemptSerializer(StrictSerializer):
+    id = serializers.UUIDField(default=uuid.uuid4)
     term = serializers.UUIDField()
     kind = serializers.ChoiceField(choices=Exercise.Kind.choices)
     exercise = serializers.UUIDField(required=False, allow_null=True)
