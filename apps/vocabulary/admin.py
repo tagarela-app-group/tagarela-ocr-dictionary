@@ -5,10 +5,10 @@ from apps.vocabulary.models import Group, Term
 
 @admin.register(Group)
 class GroupAdmin(admin.ModelAdmin):
-    list_display = ("name", "user", "icon", "accent", "created_at")
+    list_display = ("name", "course", "icon", "accent", "created_at")
     list_filter = ("accent",)
-    search_fields = ("name", "user__email")
-    readonly_fields = ("id", "user", "created_at")
+    search_fields = ("name", "course__user__email")
+    readonly_fields = ("id", "created_at")
 
 
 @admin.register(Term)

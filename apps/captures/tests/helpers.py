@@ -20,7 +20,6 @@ def make_capture(user, **fields) -> Capture:
         "user": user,
         "source": Capture.Source.TEXT,
         "status": Capture.Status.READY,
-        "original_text": TEXT,
         "text": TEXT,
         "captured_at": timezone.now(),
     }

@@ -34,7 +34,7 @@ class VocabularyService:
         return group
 
     def create_group(self, course: Course, data: dict) -> Group:
-        return self._save_group(Group(user_id=course.user_id, course=course), data)
+        return self._save_group(Group(course=course), data)
 
     def update_group(self, group: Group, data: dict) -> Group:
         self._save_group(group, data)

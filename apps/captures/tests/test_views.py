@@ -50,9 +50,7 @@ class CreateCaptureTests(CaptureApiTestCase):
                 body = response.json()
                 self.assertEqual(body["status"], "ready")
                 self.assertEqual(body["text"], TEXT)
-                self.assertEqual(body["original_text"], TEXT)
                 self.assertEqual(body["terms"], [])
-                self.assertIsNotNone(body["processed_at"])
                 self.assertEqual(Capture.objects.get(id=body["id"]).user, self.user)
 
     def test_same_id_again_returns_the_existing_capture(self):
@@ -181,7 +179,6 @@ class DetailCaptureTests(CaptureApiTestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["text"], new_text)
-        self.assertEqual(response.json()["original_text"], TEXT)
         self.assertEqual(response.json()["terms"], [MIND_THE_GAP])
 
     def test_patch_text_and_terms_validates_against_new_text(self):

@@ -90,7 +90,7 @@ class CreateGroupTests(VocabularyApiTestCase):
 
         self.assertEqual(response.status_code, 201)
         group = Group.objects.get()
-        self.assertEqual(group.user, self.user)
+        self.assertEqual(group.course.user, self.user)
         self.assertEqual(
             response.json(),
             {
