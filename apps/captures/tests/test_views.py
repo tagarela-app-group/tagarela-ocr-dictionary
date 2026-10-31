@@ -91,15 +91,6 @@ class CreateCaptureTests(CaptureApiTestCase):
         self.assertEqual(response.status_code, 400)
         self.assertIn("text", response.json())
 
-    def test_unknown_field_returns_400(self):
-        response = self.create(user=99, status="analyzed")
-
-        self.assertEqual(response.status_code, 400)
-        self.assertEqual(
-            response.json(),
-            {"status": ["Campo não permitido."], "user": ["Campo não permitido."]},
-        )
-
     def test_invalid_values_return_400(self):
         response = self.create(id="abc", source="video", captured_at="ontem", text="x" * 2001)
 

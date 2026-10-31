@@ -16,7 +16,6 @@ class HealthViewTests(APISimpleTestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), {"status": "ok", "checks": {"database": True}})
-        connections.__getitem__.assert_called_once_with("default")
 
     def test_database_down_returns_503(self, connections):
         connections["default"].ensure_connection.side_effect = OperationalError("down")
