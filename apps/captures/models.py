@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.db import models
 
+from apps.common.text import term_key
 from apps.courses.models import Course
 
 
@@ -40,6 +41,7 @@ class Capture(models.Model):
 class CaptureTerm(models.Model):
     capture = models.ForeignKey(Capture, on_delete=models.CASCADE, related_name="terms")
     text = models.CharField(max_length=255)
+    key = models.CharField(max_length=255)
     start = models.PositiveIntegerField()
     end = models.PositiveIntegerField()
 
@@ -50,6 +52,10 @@ class CaptureTerm(models.Model):
                 fields=["capture", "start", "end"], name="unique_capture_term_span"
             ),
         ]
+
+    def save(self, *args, **kwargs) -> None:
+        self.key = term_key(self.text)
+        super().save(*args, **kwargs)
 
     def __str__(self) -> str:
         return self.text

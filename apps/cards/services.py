@@ -5,7 +5,6 @@ from apps.captures.models import Capture
 from apps.cards.models import TermCard
 from apps.language_analysis.services import LinguisticAnalysisService
 from apps.vocabulary.models import Term
-from apps.vocabulary.services import term_key
 
 ANALYSIS_LANGUAGES = {"en": "en", "es": "es", "pt": "pt-BR"}
 
@@ -47,7 +46,7 @@ class TermCardService:
                 course=term.course,
                 status=Capture.Status.ANALYZED,
                 discarded_at__isnull=True,
-                terms__text__iexact=term.text,
+                terms__key=term.key,
             )
             .distinct()
             .order_by("-captured_at")
@@ -58,11 +57,11 @@ class TermCardService:
             Term.objects.filter(
                 course=term.course,
                 deleted_at__isnull=True,
-                key__in={term_key(span.text) for span in spans},
+                key__in={span.key for span in spans},
             ).values_list("key", "id")
         )
         for span in spans:
-            span.term_id = ids.get(term_key(span.text))
+            span.term_id = ids.get(span.key)
 
         return captures
 
