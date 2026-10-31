@@ -206,13 +206,16 @@ jobs:
         run: docker run --detach --name api --network host --env-file "$RUNNER_TEMP/prd.env" tagarela-api
 
       - name: /health 200
-        run: curl --fail --silent --show-error --retry 10 --retry-delay 3 --retry-all-errors -H "Host: api.tagarela.test" http://localhost:8000/health
+        run: |
+          curl --fail --silent --show-error --retry 10 --retry-delay 3 --retry-all-errors -H "Host: api.tagarela.test" http://localhost:8000/health
 
       - name: HTTP vira HTTPS
-        run: curl --silent --output /dev/null --write-out '%{http_code} %{redirect_url}' -H "Host: api.tagarela.test" http://localhost:8000/admin/login/ | grep '^301 https://api.tagarela.test/admin/login/'
+        run: |
+          curl --silent --output /dev/null --write-out '%{http_code} %{redirect_url}' -H "Host: api.tagarela.test" http://localhost:8000/admin/login/ | grep '^301 https://api.tagarela.test/admin/login/'
 
       - name: Estáticos do admin
-        run: curl --fail --silent --show-error --output /dev/null -H "Host: api.tagarela.test" -H "X-Forwarded-Proto: https" http://localhost:8000/static/admin/css/base.css
+        run: |
+          curl --fail --silent --show-error --output /dev/null -H "Host: api.tagarela.test" -H "X-Forwarded-Proto: https" http://localhost:8000/static/admin/css/base.css
 
       - name: Logs
         if: failure()
