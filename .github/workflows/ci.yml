@@ -127,6 +127,9 @@ jobs:
       - name: /health 200
         run: curl --fail --silent --show-error --retry 10 --retry-delay 3 --retry-all-errors http://localhost:8000/health
 
+      - name: Segredo fora da imagem
+        run: docker run --rm "$(docker compose images --quiet api)" sh -c 'test ! -e .env && test ! -e .git'
+
       - name: Logs
         if: failure()
         run: docker compose logs
