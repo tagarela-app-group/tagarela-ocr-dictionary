@@ -28,7 +28,7 @@ class StubAnalysis:
         self.calls.append(data)
         if self.error:
             raise self.error
-        return {"input": data, "analysis": self.analysis, "metadata": METADATA}
+        return {"analysis": self.analysis, "metadata": METADATA}
 
 
 class TermCardApiTestCase(APITestCase):
