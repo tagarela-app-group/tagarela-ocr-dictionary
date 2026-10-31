@@ -5,9 +5,7 @@ from apps.vocabulary.services import term_key
 
 def make_group(user, name: str = "Viagem", **fields) -> Group:
     fields.setdefault("course", make_course(user))
-    return Group.objects.create(
-        user=user, name=name, **{"icon": "travel", "accent": "sky", **fields}
-    )
+    return Group.objects.create(name=name, **{"icon": "travel", "accent": "sky", **fields})
 
 
 def make_term(user, text: str, group: Group | None = None, **fields) -> Term:

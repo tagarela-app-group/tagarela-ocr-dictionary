@@ -49,7 +49,6 @@ class TermCardApiTestCase(APITestCase):
         return make_capture(
             self.user,
             text=text,
-            original_text=text,
             status=Capture.Status.ANALYZED,
             analyzed_at=timezone.now(),
             captured_at=timezone.now() - timedelta(days=days_ago),
@@ -248,7 +247,7 @@ class TermDetailTests(TermCardApiTestCase):
         newer = self.analyzed("Most of the team is still ON THE FENCE.", days_ago=1)
         self.mark(older, "on the fence")
         self.mark(newer, "ON THE FENCE")
-        ready = make_capture(self.user, text=TEXT, original_text=TEXT)
+        ready = make_capture(self.user, text=TEXT)
         self.mark(ready, "on the fence")
         discarded = self.analyzed(discarded_at=timezone.now())
         self.mark(discarded, "on the fence")

@@ -56,10 +56,8 @@ class CaptureService:
                     course=course,
                     source=data["source"],
                     status=Capture.Status.READY,
-                    original_text=data["text"],
                     text=data["text"],
                     captured_at=data["captured_at"],
-                    processed_at=timezone.now(),
                 )
         except IntegrityError:
             return self._same_owner(Capture.objects.get(pk=data["id"]), user), False

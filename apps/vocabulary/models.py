@@ -23,9 +23,6 @@ class Group(models.Model):
         SLATE = "slate", "Ardósia"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    user = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="term_groups"
-    )
     course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name="groups")
     name = models.CharField(max_length=100)
     icon = models.CharField(max_length=30)
