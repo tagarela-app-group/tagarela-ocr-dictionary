@@ -18,7 +18,7 @@ class ReviewService:
         self.policy = policy or StepPolicy()
         self.rng = rng or random.Random()
 
-    def session(self, course: Course, kinds: list[str]) -> dict:
+    def session(self, course: Course | None, kinds: list[str]) -> dict:
         due = self.policy.due(Term.objects.filter(course=course, deleted_at__isnull=True))
         terms = list(due.order_by("level", "created_at")[: settings.REVIEW_SESSION_SIZE])
         self.rng.shuffle(terms)

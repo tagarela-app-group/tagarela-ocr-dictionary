@@ -111,7 +111,7 @@ class CaptureService:
 
     def _course(self, user, course_id) -> Course:
         if course_id is None:
-            return self.courses.active(user)
+            return self.courses.ensure_active(user)
 
         course = Course.objects.filter(user=user, pk=course_id).first()
         if course is None:
