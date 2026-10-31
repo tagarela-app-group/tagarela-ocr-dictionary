@@ -2,7 +2,7 @@
 
 Backend (Django REST) do Tagarela: conta, login e capturas (o texto da foto e do áudio chega já extraído pelo app).
 
-Language-analysis API documentation: [docs/language_analysis.md](docs/language_analysis.md).
+Análise com o Gemini: [docs/language_analysis.md](docs/language_analysis.md).
 
 Comece por [CLAUDE.md](CLAUDE.md).
 

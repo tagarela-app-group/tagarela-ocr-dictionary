@@ -9,7 +9,6 @@ urlpatterns = [
     path("api/v1/", include("apps.courses.urls")),
     path("api/v1/", include("apps.captures.urls")),
     path("api/v1/", include("apps.vocabulary.urls")),
-    path("api/v1/", include("apps.language_analysis.urls")),
     path("api/v1/", include("apps.cards.urls")),
     path("api/v1/", include("apps.exercises.urls")),
     path("api/v1/", include("apps.reviews.urls")),

@@ -40,17 +40,6 @@ class LinguisticAnalysisServiceTests(SimpleTestCase):
         )
         self.assertIn('"selected_term":"run"', provider.prompt)
 
-    def test_missing_term_and_level_go_as_null(self):
-        provider = StubProvider(VALID_ANALYSIS)
-
-        result = LinguisticAnalysisService(provider).analyze(
-            {"text": "run", "source_language": "auto", "target_language": "pt-BR"}
-        )
-
-        self.assertIsNone(result["input"]["selected_term"])
-        self.assertIsNone(result["input"]["level"])
-        self.assertIn('"selected_term":null', provider.prompt)
-
     def test_rejects_an_invalid_provider_response(self):
         invalid = {**VALID_ANALYSIS, "focus": "", "unexpected": "value"}
 

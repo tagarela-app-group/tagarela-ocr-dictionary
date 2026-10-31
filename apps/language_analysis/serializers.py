@@ -1,11 +1,7 @@
-import re
 from collections.abc import Mapping
 
-from django.conf import settings
 from rest_framework import serializers
 
-LANGUAGE_CODE_PATTERN = re.compile(r"^[a-z]{2,3}(?:-[A-Za-z]{2,4})?$")
-CEFR_LEVELS = ("A1", "A2", "B1", "B2", "C1", "C2")
 FORMALITY_LEVELS = ("slang", "informal", "neutral", "formal")
 DIALOGUE_SPEAKERS = ("A", "B")
 
@@ -26,51 +22,6 @@ class LanguageAnalysisStrictSerializer(serializers.Serializer):
         if unknown:
             raise serializers.ValidationError(unknown)
 
-        return value
-
-
-class LanguageAnalysisRequestSerializer(LanguageAnalysisStrictSerializer):
-    text = serializers.CharField(
-        max_length=settings.LANGUAGE_ANALYSIS_MAX_TEXT_LENGTH,
-        trim_whitespace=True,
-        error_messages={
-            "required": "Text is required.",
-            "blank": "Text must not be empty.",
-            "max_length": "Text must not exceed {max_length} characters.",
-        },
-    )
-    selected_term = serializers.CharField(required=False, allow_null=True, allow_blank=False)
-    source_language = serializers.CharField(required=False, default="auto")
-    target_language = serializers.CharField(required=False, default="pt-BR")
-    level = serializers.ChoiceField(
-        choices=CEFR_LEVELS,
-        required=False,
-        allow_null=True,
-        default=None,
-        error_messages={"invalid_choice": "Level must be one of: A1, A2, B1, B2, C1, C2."},
-    )
-
-    def validate_selected_term(self, value: str | None) -> str | None:
-        if value is None:
-            return None
-
-        value = " ".join(value.split())
-        if not value:
-            raise serializers.ValidationError("Selected term must not be empty.")
-        return value
-
-    def validate_source_language(self, value: str) -> str:
-        if value == "auto":
-            return value
-        return self._validate_language_code(value, "Source language", allow_auto=True)
-
-    def validate_target_language(self, value: str) -> str:
-        return self._validate_language_code(value, "Target language", allow_auto=False)
-
-    def _validate_language_code(self, value: str, field_name: str, allow_auto: bool) -> str:
-        if not LANGUAGE_CODE_PATTERN.fullmatch(value):
-            accepted = "a language code or 'auto'" if allow_auto else "a language code"
-            raise serializers.ValidationError(f"{field_name} must be {accepted}.")
         return value
 
 
@@ -138,14 +89,3 @@ class LinguisticAnalysisSerializer(LanguageAnalysisStrictSerializer):
     source_formality_note = serializers.CharField(allow_null=True, allow_blank=False)
     source_contexts = UsageContextSerializer(many=True, max_length=4)
     dialogue = DialogueLineSerializer(many=True, max_length=4)
-
-
-class LanguageAnalysisMetadataSerializer(LanguageAnalysisStrictSerializer):
-    model = serializers.CharField(allow_blank=False)
-    prompt_version = serializers.CharField(allow_blank=False)
-
-
-class LanguageAnalysisResponseSerializer(LanguageAnalysisStrictSerializer):
-    input = LanguageAnalysisRequestSerializer()
-    analysis = LinguisticAnalysisSerializer()
-    metadata = LanguageAnalysisMetadataSerializer()
