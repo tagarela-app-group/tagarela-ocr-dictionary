@@ -26,7 +26,7 @@ Detalhe de cada feature e ambientes: `docs/produto.md`. Exercícios: `docs/exerc
 10. Dependência nova: checar manutenção e contar ao usuário; nativa ou pesada: perguntar.
 11. Fim de task ou troca de assunto: sugerir `/compact manter: ...` ou `/clear`.
 12. Tipagem estrita: sem `Any`; parâmetros e retornos anotados. Dado de fora (JSON, IA) entra como `object`/`Mapping[str, object]` e vira tipo de verdade antes de circular.
-13. Sem repetição: antes de escrever, procurar em `apps/` e nos testes. Igual em 2 lugares vira uma peça só (service, `common/`, helper de teste). Igual por acaso, com regra diferente, fica separado. A esteira falha com qualquer trecho repetido (`jscpd`).
+13. DRY: antes de escrever, procurar em `apps/` e nos testes o que já faz isso e reusar; se quase serve, generalizar em vez de copiar. A mesma regra ou comportamento em 2 lugares vira uma peça só (service, `common/`, helper de teste), mesmo com código diferente, que o `jscpd` não pega. Igual por acaso, com regra diferente, fica separado. A esteira falha com qualquer trecho repetido (`jscpd`).
 
 ## Arquitetura
 
@@ -43,7 +43,7 @@ Detalhe de cada feature e ambientes: `docs/produto.md`. Exercícios: `docs/exerc
 - Código em inglês, texto pro usuário em pt-BR. Ruff, linha 100.
 - Nomes `<X>Service`, `<X>Provider`, `<X>Serializer`; dependências injetáveis pelo construtor.
 - Contrato só JSON, sem barra final; erros com mensagem pt-BR por campo.
-- Testes no runner do Django, em `apps/<app>/tests/`. Rota nova que o app lê entra em `test_app_contract.py`, que compara com `test/contract/*.json` do app.
+- Testes no runner do Django, em `apps/<app>/tests/`. Rota nova que o app lê entra em `test_app_contract.py`, que compara com `test/contract/*.json` do app: no PR, da branch do app com o mesmo nome; sem ela, ou fora de PR, da `develop`. Exemplo novo: mergear o PR do app antes, ou a esteira da `develop` da API falha até ele entrar.
 
 ## Comandos
 
