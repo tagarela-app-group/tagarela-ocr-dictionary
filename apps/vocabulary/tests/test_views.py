@@ -5,7 +5,7 @@ from apps.captures.tests.helpers import make_user
 from apps.courses.models import Course
 from apps.courses.tests.helpers import make_course
 from apps.vocabulary.models import Group, Term
-from apps.vocabulary.tests.helpers import make_group, make_term
+from apps.vocabulary.tests.helpers import api_datetime, make_group, make_term
 
 VOCABULARY = "/api/v1/vocabulary"
 GROUPS = "/api/v1/groups"
@@ -47,6 +47,7 @@ class VocabularyTests(VocabularyApiTestCase):
                                 "translation": "cansaço da viagem",
                                 "kind": "expression",
                                 "level": 4,
+                                "created_at": api_datetime(jet_lag.created_at),
                             }
                         ],
                     }
@@ -58,6 +59,7 @@ class VocabularyTests(VocabularyApiTestCase):
                         "translation": "",
                         "kind": "expression",
                         "level": 0,
+                        "created_at": api_datetime(loose.created_at),
                     }
                 ],
             },
@@ -211,6 +213,7 @@ class GroupDetailTests(VocabularyApiTestCase):
                         "translation": "",
                         "kind": "expression",
                         "level": 0,
+                        "created_at": api_datetime(term.created_at),
                     }
                 ],
             },

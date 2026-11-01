@@ -10,7 +10,7 @@ from apps.courses.tests.helpers import make_course
 from apps.exercises.models import Exercise
 from apps.reviews.models import ReviewAttempt
 from apps.reviews.policy import MASTERED_LEVEL
-from apps.vocabulary.tests.helpers import make_term
+from apps.vocabulary.tests.helpers import api_datetime, make_term
 
 
 def make_exercise(term, variant: int = 0) -> Exercise:
@@ -58,6 +58,7 @@ class ReviewSessionTests(APITestCase):
                         "translation": "",
                         "kind": term.kind,
                         "level": term.level,
+                        "created_at": api_datetime(term.created_at),
                     },
                     "kind": "listen_write",
                 }
