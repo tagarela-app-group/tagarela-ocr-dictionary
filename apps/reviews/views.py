@@ -17,16 +17,12 @@ from apps.vocabulary.serializers import TermSerializer
 
 @api_view(["GET"])
 def review_session(request):
-    kinds = list(KINDS)
-    if "kinds" in request.query_params:
-        kinds = [kind for kind in request.query_params.getlist("kinds") if kind in KINDS]
-
     query = SessionQuerySerializer(data=request.query_params)
     query.is_valid(raise_exception=True)
 
     session = ReviewService().session(
         CourseService().active(request.user),
-        kinds,
+        [kind for kind in query.validated_data.get("kinds", KINDS) if kind in KINDS],
         query.validated_data.get("date"),
         query.validated_data["offset"],
     )

@@ -20,7 +20,8 @@ def too_far(given: Date, reference: Date) -> bool:
     return abs((given - reference).days) > settings.REVIEW_DATE_TOLERANCE_DAYS
 
 
-class SessionQuerySerializer(serializers.Serializer):
+class SessionQuerySerializer(StrictSerializer):
+    kinds = serializers.ListField(child=serializers.CharField(allow_blank=True), required=False)
     date = serializers.DateField(required=False)
     offset = serializers.IntegerField(
         default=0, min_value=-MAX_OFFSET_MINUTES, max_value=MAX_OFFSET_MINUTES
