@@ -25,8 +25,8 @@ Backend Django REST do Tagarela (app Flutter em `../mob`). Guarda conta, captura
 5. Código novo/alterado: com teste. Bug: teste que reproduz. Testes nunca usam rede real. Teste existe pra pegar bug: cobra regra, contrato, validação e borda. Não testa cópia do código (texto de prompt, constante, valor de setting), o Django, o DRF ou lib, nem o que outro teste já cobre (login obrigatório é o padrão, coberto no `test_api_auth.py`). Antes de escrever, dizer que bug ele pegaria; nenhum, não escreve.
 6. Sem comentário em código/config. Porquê vai aqui ou no PR.
 7. Mudou regra ou decisão: atualizar aqui. Guia, não inventário: só o que o código não mostra.
-8. Git, sem perguntar: branch da `develop` (`feat/ fix/ docs/ ci/ chore/`) → commit → push → PR pra `develop`. Conventional Commits pt-BR, enxuto, sem assinatura de IA. Esteira verde: `gh pr merge <n> --repo tagarela-app-group/tagarela-ocr-dictionary --squash --delete-branch` (isolado, sem `cd`/`&&`), depois `git switch develop && git pull && git branch -D <branch>`.
-9. Nunca commitar direto em `develop`/`main`. `develop` → `main` só o usuário.
+8. Git é do usuário: no máximo um commit local, em branch da `develop` (`feat/ fix/ docs/ ci/ chore/`), nunca direto em `develop`/`main`. Conventional Commits pt-BR, enxuto, sem assinatura de IA. Push, PR, merge e erro da esteira: ele cuida.
+9. Validar é do usuário: não rodar teste, lint, análise nem build. A entrega é o código e os testes escritos; ao terminar, dizer o que mudou, sem afirmar que funciona.
 10. Dependência nova: checar manutenção e contar ao usuário; nativa ou pesada: perguntar.
 11. Fim de task/troca de assunto: sugerir `/compact manter: ...` ou `/clear`.
 12. Tipagem estrita em código novo/alterado: sem `Any`; parâmetros e retornos anotados. Dado de fora (JSON, IA) entra como `object`/`Mapping[str, object]` e vira tipo de verdade (serializer, `TypedDict`, dataclass) antes de circular.
@@ -59,4 +59,4 @@ Backend Django REST do Tagarela (app Flutter em `../mob`). Guarda conta, captura
 
 ## Comandos
 
-Subir: `README.md`. No container (`docker compose exec api ...`): `python manage.py test -v 0`, `python manage.py makemigrations`. Fora: `ruff format .`, `ruff check --fix .`, `npx jscpd@5.4.1 apps config --format python --ignore "**/migrations/**" --threshold 0`. Antes do push: só o que gera arquivo (`ruff format .`, `makemigrations`). Testes, análise e checagem de migration ficam pra esteira.
+Subir: `README.md`. Só rodar o que gera arquivo: `ruff format .` e, no container (`docker compose exec api ...`), `python manage.py makemigrations`.
