@@ -30,7 +30,7 @@ Detalhe de cada feature e ambientes: `docs/produto.md`. Exercícios: `docs/exerc
 
 ## Arquitetura
 
-- Monólito modular, um app por responsabilidade em `apps/`; Postgres é a verdade. Dependências só descem (`reviews` → `exercises` → `cards` → `captures` → `vocabulary` → `courses` → `common`; `cards` e `exercises` → `language_analysis`; `accounts` e `language_analysis` só usam `common`). `test_architecture.py` cobra; app novo entra no `LAYERS`.
+- Monólito modular, um app por responsabilidade em `apps/`; Postgres é a verdade. Dependências só descem (`reviews` → `exercises` → `cards` → `captures` → `vocabulary` → `courses` → `common`; `daily_words` → `cards`; `cards`, `exercises` e `daily_words` → `language_analysis`; `accounts` e `language_analysis` só usam `common`). `test_architecture.py` cobra; app novo entra no `LAYERS`.
 - View fina (serializer valida, service faz, `Response`), regra de negócio só em service, lib externa só em `providers/`.
 - IA: `GeminiProvider.generate(prompt, system_instruction=, schema=)` é o único ponto com o Gemini; o schema sai do serializer e a resposta passa por ele antes de salvar. Campo no idioma aprendido leva prefixo `source_`, no idioma base `target_`: sem prefixo o Gemini ignora o idioma. Toda chamada com `store=False`.
 - Toda entrada passa por serializer estrito (campo desconhecido = 400).
