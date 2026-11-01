@@ -14,6 +14,6 @@ class GroupAdmin(admin.ModelAdmin):
 @admin.register(Term)
 class TermAdmin(admin.ModelAdmin):
     list_display = ("text", "user", "group", "kind", "level", "created_at")
-    list_filter = ("kind", "level")
+    list_filter = ("kind",)
     search_fields = ("text", "user__email")
     readonly_fields = ("id", "user", "key", "created_at")

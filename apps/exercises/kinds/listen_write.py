@@ -5,7 +5,7 @@ from typing import TypedDict
 from rest_framework import serializers
 
 from apps.common.text import clean_text
-from apps.exercises.kinds.base import ExerciseKind
+from apps.exercises.kinds.base import Effort, ExerciseKind
 from apps.exercises.models import Exercise
 
 PROMPT_VERSION = "1.0"
@@ -76,6 +76,7 @@ def syllables(answer: str, marked: str) -> str:
 
 class ListenWrite(ExerciseKind):
     name = Exercise.Kind.LISTEN_WRITE
+    effort = Effort.LISTEN
     prompt_version = PROMPT_VERSION
     system_prompt = SYSTEM_PROMPT
     item_serializer = ListenWriteItemSerializer

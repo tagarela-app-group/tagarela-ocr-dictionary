@@ -43,7 +43,16 @@ class MoveTermsSerializer(TermsSerializer):
 class TermSerializer(serializers.ModelSerializer):
     class Meta:
         model = Term
-        fields = ("id", "text", "translation", "kind", "level", "created_at")
+        fields = (
+            "id",
+            "text",
+            "translation",
+            "kind",
+            "level",
+            "interval_days",
+            "due_at",
+            "created_at",
+        )
 
 
 class GroupSerializer(serializers.ModelSerializer):

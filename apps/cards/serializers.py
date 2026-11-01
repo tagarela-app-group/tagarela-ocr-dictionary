@@ -9,6 +9,7 @@ class RevealSerializer(StrictSerializer):
     revealed = serializers.BooleanField(required=False)
     pitfall_revealed = serializers.BooleanField(required=False)
     formality_revealed = serializers.BooleanField(required=False)
+    got_it = serializers.BooleanField(required=False)
 
     def validate(self, attrs):
         if not attrs:
@@ -109,10 +110,13 @@ class TermDetailSerializer(serializers.BaseSerializer):
             "translation": term.translation,
             "kind": term.kind,
             "level": term.level,
+            "interval_days": term.interval_days,
+            "due_at": term.due_at and serializers.DateTimeField().to_representation(term.due_at),
             "group": term.group and CardGroupSerializer(term.group).data,
             "revealed": card.revealed,
             "pitfall_revealed": card.pitfall_revealed,
             "formality_revealed": card.formality_revealed,
+            "got_it": card.got_it,
             "card": CardSerializer(card).data,
             "captures": CardCaptureSerializer(detail["captures"], many=True).data,
         }

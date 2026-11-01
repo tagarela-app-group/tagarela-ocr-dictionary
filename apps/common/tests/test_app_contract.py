@@ -1,5 +1,6 @@
 import json
 import os
+from datetime import timedelta
 from pathlib import Path
 from unittest import skipUnless
 from unittest.mock import patch
@@ -137,6 +138,11 @@ class AppContractTests(APITestCase):
         self.assert_matches(self.example("exercises"), response)
 
     def test_review_session(self) -> None:
+        now = timezone.now()
+        Term.objects.filter(pk=self.term.pk).update(
+            first_read_at=now - timedelta(days=2), due_at=now - timedelta(days=1)
+        )
+
         self.assert_matches(
             self.example("review_session"), self.client.get("/api/v1/reviews?kinds=listen_write")
         )

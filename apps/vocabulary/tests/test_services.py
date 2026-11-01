@@ -55,7 +55,7 @@ class AddTermsTests(TestCase):
 
     def test_deleted_term_comes_back_with_level_and_group(self):
         group = make_group(self.user)
-        old = make_term(self.user, "jet lag", group, level=3, deleted_at=timezone.now())
+        old = make_term(self.user, "jet lag", group, interval_days=16, deleted_at=timezone.now())
 
         VocabularyService().add_terms(self.course, ["Jet lag"])
 

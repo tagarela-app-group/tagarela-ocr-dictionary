@@ -11,6 +11,7 @@ Detalhe de cada feature e ambientes: `docs/produto.md`. Exercícios: `docs/exerc
 - Captura: texto que a pessoa revisa, marca termos e confirma; termos confirmados vão pro vocabulário.
 - Vocabulário: termo único por curso, em grupos que só a pessoa cria. IA nunca organiza.
 - Ficha e exercícios: a IA gera na 1ª vez, fica salvo, não regenera.
+- Revisão: cada termo tem um prazo em dias, e o nível sai dele. Conta só em `reviews/policy.py`.
 
 ## Regras
 

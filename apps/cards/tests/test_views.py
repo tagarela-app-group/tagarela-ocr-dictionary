@@ -359,6 +359,15 @@ class RevealTermTests(TermCardApiTestCase):
         self.assertEqual(response.status_code, 400)
         self.assertEqual(set(response.json()), {"revealed"})
 
+    def test_got_it_answer_is_saved_and_comes_back(self):
+        term = make_term(self.user, "gap")
+        self.assertIsNone(self.client.get(self.url(term)).json()["got_it"])
+
+        response = self.reveal(term, got_it=False)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIs(self.client.get(self.url(term)).json()["got_it"], False)
+
     def test_without_card_returns_404_and_builds_nothing(self):
         term = make_term(self.user, "gap")
 
