@@ -5,6 +5,10 @@ from django.db import models
 from django.db.models import F, Q
 
 
+def start_capacity() -> int:
+    return settings.REVIEW_CAPACITY_START
+
+
 class Course(models.Model):
     class Language(models.TextChoices):
         EN = "en", "Inglês"
@@ -18,6 +22,9 @@ class Course(models.Model):
     learning = models.CharField(max_length=2, choices=Language.choices)
     base = models.CharField(max_length=2, choices=Language.choices)
     active = models.BooleanField(default=False)
+    review_capacity = models.PositiveSmallIntegerField(default=start_capacity)
+    daily_limit = models.PositiveSmallIntegerField(default=start_capacity)
+    last_active_on = models.DateField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

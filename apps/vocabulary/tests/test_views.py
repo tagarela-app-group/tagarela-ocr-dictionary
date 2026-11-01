@@ -24,7 +24,9 @@ class VocabularyApiTestCase(APITestCase):
 class VocabularyTests(VocabularyApiTestCase):
     def test_lists_groups_with_their_terms_and_the_ungrouped_ones(self):
         travel = make_group(self.user)
-        jet_lag = make_term(self.user, "jet lag", travel, translation="cansaço da viagem", level=4)
+        jet_lag = make_term(
+            self.user, "jet lag", travel, translation="cansaço da viagem", interval_days=24
+        )
         loose = make_term(self.user, "touch base")
         make_term(make_user("bia@example.com"), "carry-on")
 
@@ -47,6 +49,8 @@ class VocabularyTests(VocabularyApiTestCase):
                                 "translation": "cansaço da viagem",
                                 "kind": "expression",
                                 "level": 4,
+                                "interval_days": 24.0,
+                                "due_at": None,
                                 "created_at": api_datetime(jet_lag.created_at),
                             }
                         ],
@@ -59,6 +63,8 @@ class VocabularyTests(VocabularyApiTestCase):
                         "translation": "",
                         "kind": "expression",
                         "level": 0,
+                        "interval_days": 2.0,
+                        "due_at": None,
                         "created_at": api_datetime(loose.created_at),
                     }
                 ],
@@ -213,6 +219,8 @@ class GroupDetailTests(VocabularyApiTestCase):
                         "translation": "",
                         "kind": "expression",
                         "level": 0,
+                        "interval_days": 2.0,
+                        "due_at": None,
                         "created_at": api_datetime(term.created_at),
                     }
                 ],
@@ -321,7 +329,7 @@ class RestoreTermsTests(VocabularyApiTestCase):
 
     def test_restores_the_terms_to_their_group(self):
         travel = make_group(self.user)
-        term = make_term(self.user, "jet lag", travel, level=3)
+        term = make_term(self.user, "jet lag", travel, interval_days=16)
         self.client.post(DELETE, {"terms": [str(term.id)]}, format="json")
 
         response = self.restore(term)

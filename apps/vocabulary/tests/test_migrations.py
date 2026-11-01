@@ -1,9 +1,6 @@
 from django.utils import timezone
 
-from apps.captures.models import Capture
 from apps.common.tests.migrations import MigrationTestCase
-from apps.courses.models import Course
-from apps.vocabulary.models import Group, Term
 
 ACCOUNTS = ("accounts", "0002_user_country")
 
@@ -73,20 +70,28 @@ class CourseBackfillTests(MigrationTestCase):
             captured_at=timezone.now(),
         )
 
-        self.migrate(
+        apps = self.migrate(
             ("vocabulary", "0007_curso_obrigatorio"), ("captures", "0005_curso_obrigatorio")
         )
+        Course = apps.get_model("courses", "Course")
 
         courses = Course.objects.order_by("user__email")
         self.assertEqual(
             [(c.user.email, c.learning, c.base, c.active) for c in courses],
             [("ana@example.com", "en", "pt", True), ("bia@example.com", "en", "pt", True)],
         )
-        self.assertEqual(Group.objects.get().course.user.email, "ana@example.com")
         self.assertEqual(
-            {t.text: t.course.user.email for t in Term.objects.all()},
+            apps.get_model("vocabulary", "Group").objects.get().course.user.email,
+            "ana@example.com",
+        )
+        self.assertEqual(
+            {
+                t.text: t.course.user.email
+                for t in apps.get_model("vocabulary", "Term").objects.all()
+            },
             {"layover": "ana@example.com", "gap": "bia@example.com"},
         )
         self.assertEqual(
-            Capture.objects.get().course, Course.objects.get(user__email="bia@example.com")
+            apps.get_model("captures", "Capture").objects.get().course,
+            Course.objects.get(user__email="bia@example.com"),
         )

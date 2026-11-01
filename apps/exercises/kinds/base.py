@@ -1,12 +1,19 @@
 import json
 from collections.abc import Mapping
 from dataclasses import asdict, dataclass
+from enum import StrEnum
 
 from rest_framework import serializers
 
 from apps.common.schema import json_schema
 
 type Payload = Mapping[str, object]
+
+
+class Effort(StrEnum):
+    READ = "read"
+    LISTEN = "listen"
+    PRODUCE = "produce"
 
 
 @dataclass(frozen=True)
@@ -21,6 +28,7 @@ class Brief:
 
 class ExerciseKind:
     name: str
+    effort: Effort
     prompt_version: str
     system_prompt: str
     item_serializer: type[serializers.Serializer]

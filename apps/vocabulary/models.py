@@ -1,10 +1,19 @@
 import uuid
+from bisect import bisect_right
 
 from django.conf import settings
 from django.db import models
 from django.db.models.functions import Lower
 
 from apps.courses.models import Course
+
+
+def start_interval_days() -> float:
+    return settings.REVIEW_START_INTERVAL_DAYS
+
+
+def first_review_days() -> float:
+    return settings.REVIEW_FIRST_REVIEW_DAYS
 
 
 class Group(models.Model):
@@ -56,7 +65,14 @@ class Term(models.Model):
     key = models.CharField(max_length=255)
     kind = models.CharField(max_length=20, choices=Kind.choices)
     translation = models.CharField(max_length=255, blank=True)
-    level = models.PositiveSmallIntegerField(default=0)
+    interval_days = models.FloatField(default=start_interval_days)
+    scheduled_days = models.FloatField(default=first_review_days)
+    due_at = models.DateTimeField(null=True, blank=True)
+    last_session_at = models.DateTimeField(null=True, blank=True)
+    ease = models.FloatField(default=1.0)
+    first_read_at = models.DateTimeField(null=True, blank=True)
+    audio_heard_at = models.DateTimeField(null=True, blank=True)
+    study_points = models.FloatField(default=0.0)
     created_at = models.DateTimeField(auto_now_add=True)
     deleted_at = models.DateTimeField(null=True, blank=True)
 
@@ -68,3 +84,7 @@ class Term(models.Model):
 
     def __str__(self) -> str:
         return self.text
+
+    @property
+    def level(self) -> int:
+        return bisect_right(settings.REVIEW_LEVEL_DAYS, self.interval_days)
