@@ -65,11 +65,20 @@ jobs:
       - name: Migration faltando
         run: python manage.py makemigrations --check --dry-run
 
+      - name: Branch do app com os exemplos do contrato
+        id: app
+        run: |
+          if [ -n "$GITHUB_HEAD_REF" ] && git ls-remote --exit-code --heads https://github.com/tagarela-app-group/tagarela "refs/heads/$GITHUB_HEAD_REF"; then
+            echo "ref=$GITHUB_HEAD_REF" >> "$GITHUB_OUTPUT"
+          else
+            echo "ref=develop" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Exemplos do contrato com o app
         uses: actions/checkout@v7
         with:
           repository: tagarela-app-group/tagarela
-          ref: develop
+          ref: ${{ steps.app.outputs.ref }}
           path: .app
           sparse-checkout: test/contract
 

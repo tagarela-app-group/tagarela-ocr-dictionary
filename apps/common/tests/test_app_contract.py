@@ -155,6 +155,21 @@ class AppContractTests(APITestCase):
 
         self.assert_matches(self.example("review_attempt"), response)
 
+    def test_daily_word(self) -> None:
+        provider = StubProvider(
+            response={
+                "source_word": "hangry",
+                "phonetic": "/ˈhæŋ.ɡri/",
+                "source_example": "Feed me, I'm getting hangry!",
+                "target_meaning": "com fome e de mau humor",
+            }
+        )
+
+        with patch("apps.daily_words.services.GeminiProvider", return_value=provider):
+            response = self.client.post("/api/v1/daily-word/save")
+
+        self.assert_matches(self.example("daily_word"), response)
+
     def test_account(self) -> None:
         response = self.client.patch("/api/v1/account", {"country": "BR"}, format="json")
 

@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     "apps.cards",
     "apps.exercises",
     "apps.reviews",
+    "apps.daily_words",
 ]
 
 MIDDLEWARE = [
@@ -159,6 +160,7 @@ GEMINI_TIMEOUT = env_int("GEMINI_TIMEOUT", 30)
 TERM_CARD_MAX_CAPTURES = env_int("TERM_CARD_MAX_CAPTURES", 10)
 EXERCISE_VARIATIONS = env_int("EXERCISE_VARIATIONS", 3)
 REVIEW_SESSION_SIZE = env_int("REVIEW_SESSION_SIZE", 10)
+DAILY_WORD_AVOID_LIMIT = env_int("DAILY_WORD_AVOID_LIMIT", 200)
 
 REST_FRAMEWORK = {
     "DEFAULT_RENDERER_CLASSES": [

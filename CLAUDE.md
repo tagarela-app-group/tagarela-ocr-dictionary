@@ -26,11 +26,11 @@ Detalhe de cada feature e ambientes: `docs/produto.md`. Exercícios: `docs/exerc
 10. Dependência nova: checar manutenção e contar ao usuário; nativa ou pesada: perguntar.
 11. Fim de task ou troca de assunto: sugerir `/compact manter: ...` ou `/clear`.
 12. Tipagem estrita: sem `Any`; parâmetros e retornos anotados. Dado de fora (JSON, IA) entra como `object`/`Mapping[str, object]` e vira tipo de verdade antes de circular.
-13. Sem repetição: antes de escrever, procurar em `apps/` e nos testes. Igual em 2 lugares vira uma peça só (service, `common/`, helper de teste). Igual por acaso, com regra diferente, fica separado. A esteira falha com qualquer trecho repetido (`jscpd`).
+13. DRY: antes de escrever, procurar em `apps/` e nos testes o que já faz isso e reusar; se quase serve, generalizar em vez de copiar. A mesma regra ou comportamento em 2 lugares vira uma peça só (service, `common/`, helper de teste), mesmo com código diferente, que o `jscpd` não pega. Igual por acaso, com regra diferente, fica separado. A esteira falha com qualquer trecho repetido (`jscpd`).
 
 ## Arquitetura
 
-- Monólito modular, um app por responsabilidade em `apps/`; Postgres é a verdade. Dependências só descem (`reviews` → `exercises` → `cards` → `captures` → `vocabulary` → `courses` → `common`; `cards` e `exercises` → `language_analysis`; `accounts` e `language_analysis` só usam `common`). `test_architecture.py` cobra; app novo entra no `LAYERS`.
+- Monólito modular, um app por responsabilidade em `apps/`; Postgres é a verdade. Dependências só descem (`reviews` → `exercises` → `cards` → `captures` → `vocabulary` → `courses` → `common`; `daily_words` → `cards`; `cards`, `exercises` e `daily_words` → `language_analysis`; `accounts` e `language_analysis` só usam `common`). `test_architecture.py` cobra; app novo entra no `LAYERS`.
 - View fina (serializer valida, service faz, `Response`), regra de negócio só em service, lib externa só em `providers/`.
 - IA: `GeminiProvider.generate(prompt, system_instruction=, schema=)` é o único ponto com o Gemini; o schema sai do serializer e a resposta passa por ele antes de salvar. Campo no idioma aprendido leva prefixo `source_`, no idioma base `target_`: sem prefixo o Gemini ignora o idioma. Toda chamada com `store=False`.
 - Toda entrada passa por serializer estrito (campo desconhecido = 400).
@@ -43,7 +43,7 @@ Detalhe de cada feature e ambientes: `docs/produto.md`. Exercícios: `docs/exerc
 - Código em inglês, texto pro usuário em pt-BR. Ruff, linha 100.
 - Nomes `<X>Service`, `<X>Provider`, `<X>Serializer`; dependências injetáveis pelo construtor.
 - Contrato só JSON, sem barra final; erros com mensagem pt-BR por campo.
-- Testes no runner do Django, em `apps/<app>/tests/`. Rota nova que o app lê entra em `test_app_contract.py`, que compara com `test/contract/*.json` do app.
+- Testes no runner do Django, em `apps/<app>/tests/`. Rota nova que o app lê entra em `test_app_contract.py`, que compara com `test/contract/*.json` do app: no PR, da branch do app com o mesmo nome; sem ela, ou fora de PR, da `develop`. Exemplo novo: mergear o PR do app antes, ou a esteira da `develop` da API falha até ele entrar.
 
 ## Comandos
 

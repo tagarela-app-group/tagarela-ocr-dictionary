@@ -18,6 +18,7 @@ LAYERS: dict[str, int] = {
     "captures": 3,
     "cards": 4,
     "exercises": 5,
+    "daily_words": 5,
     "reviews": 6,
 }
 
