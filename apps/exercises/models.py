@@ -8,6 +8,7 @@ from apps.vocabulary.models import Term
 class Exercise(models.Model):
     class Kind(models.TextChoices):
         LISTEN_WRITE = "listen_write", "Ouvir e escrever"
+        REPLY = "reply", "Responde aí"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     term = models.ForeignKey(Term, on_delete=models.CASCADE, related_name="exercises")
