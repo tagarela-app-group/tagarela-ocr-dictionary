@@ -32,6 +32,7 @@ def score(play: Play) -> Score:
     }[play.effort]
     result = {
         ReviewAttempt.Outcome.FIRST: settings.REVIEW_RESULT_FIRST,
+        ReviewAttempt.Outcome.SLIP: settings.REVIEW_RESULT_SLIP,
         ReviewAttempt.Outcome.HINT: settings.REVIEW_RESULT_HINT,
         ReviewAttempt.Outcome.RETRY: settings.REVIEW_RESULT_RETRY,
         ReviewAttempt.Outcome.MISSED: settings.REVIEW_RESULT_MISSED,

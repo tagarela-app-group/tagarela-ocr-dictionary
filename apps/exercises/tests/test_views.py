@@ -2,6 +2,7 @@ import json
 from unittest.mock import patch
 
 from django.test import override_settings
+from django.utils import timezone
 from rest_framework.test import APITestCase
 
 from apps.captures.tests.helpers import make_user
@@ -9,8 +10,9 @@ from apps.cards.models import TermCard
 from apps.courses.tests.helpers import make_course
 from apps.exercises.kinds.listen_write import PROMPT_VERSION
 from apps.exercises.models import Exercise
-from apps.exercises.tests.helpers import FENCE_ITEMS, StubProvider
+from apps.exercises.tests.helpers import FENCE_ITEMS, REPLY_ITEMS, StubProvider
 from apps.language_analysis.providers.gemini import GeminiUnavailableError
+from apps.vocabulary.models import Term
 from apps.vocabulary.tests.helpers import make_term
 
 
@@ -133,3 +135,108 @@ class TermExercisesTests(APITestCase):
         self.term.save(update_fields=["deleted_at"])
 
         self.assertEqual(self.get().status_code, 404)
+
+
+class ReplyExercisesTests(APITestCase):
+    def setUp(self):
+        super().setUp()
+        self.user = make_user()
+        self.client.force_authenticate(self.user)
+        self.course = make_course(self.user)
+        self.term = make_term(self.user, "on the fence", course=self.course)
+        self.provider = StubProvider({"items": REPLY_ITEMS})
+        stub = patch("apps.exercises.services.GeminiProvider", return_value=self.provider)
+        stub.start()
+        self.addCleanup(stub.stop)
+
+    def read_term(self, text: str, **fields) -> Term:
+        return make_term(
+            self.user, text, course=self.course, first_read_at=timezone.now(), **fields
+        )
+
+    def payloads(self) -> dict[str, dict]:
+        response = self.client.get(f"/api/v1/terms/{self.term.id}/exercises/reply")
+        self.assertEqual(response.status_code, 200, response.content)
+        return {e["payload"]["mode"]: e["payload"] for e in response.json()["exercises"]}
+
+    def test_use_offers_the_term_and_three_read_terms_of_the_vocabulary(self):
+        for text in ("awkward", "gap", "wit", "lost"):
+            self.read_term(text)
+
+        payload = self.payloads()["use"]
+
+        self.assertEqual(payload["answer"], "on the fence")
+        self.assertEqual(len(payload["options"]), 4)
+        self.assertIn("on the fence", payload["options"])
+        self.assertNotIn("wrong", payload)
+
+    def test_terms_never_read_or_deleted_are_not_options(self):
+        make_term(self.user, "never read", course=self.course)
+        self.read_term("gone", deleted_at=timezone.now())
+        make_term(
+            self.user,
+            "other course",
+            course=make_course(self.user, "es", "pt"),
+            first_read_at=timezone.now(),
+        )
+
+        self.assertEqual(self.payloads()["use"]["options"], ["on the fence"])
+
+    def test_prefers_terms_of_the_same_kind(self):
+        for text in ("mind the gap", "break the ice", "hit the road"):
+            self.read_term(text)
+        for text in ("awkward", "gap", "wit"):
+            self.read_term(text)
+
+        options = self.payloads()["use"]["options"]
+
+        self.assertEqual(
+            set(options), {"on the fence", "mind the gap", "break the ice", "hit the road"}
+        )
+
+    def test_completes_with_the_other_kind_when_the_same_is_short(self):
+        self.read_term("mind the gap")
+        for text in ("awkward", "gap"):
+            self.read_term(text)
+
+        options = self.payloads()["use"]["options"]
+
+        self.assertEqual(set(options), {"on the fence", "mind the gap", "awkward", "gap"})
+
+    def test_synonyms_of_the_term_are_not_options(self):
+        TermCard.objects.create(
+            term=self.term,
+            analysis={"synonyms": ["Undecided"]},
+            prompt_version="2.6",
+            model="m",
+        )
+        self.read_term("undecided")
+        self.read_term("awkward")
+
+        self.assertEqual(set(self.payloads()["use"]["options"]), {"on the fence", "awkward"})
+
+    def test_understand_offers_the_phrases_written_by_the_ai(self):
+        self.read_term("awkward")
+
+        payload = self.payloads()["understand"]
+
+        self.assertEqual(payload["answer"], "haven't decided yet")
+        self.assertEqual(
+            set(payload["options"]),
+            {
+                "haven't decided yet",
+                "felt embarrassed",
+                "can't take it anymore",
+                "keep putting things off",
+            },
+        )
+
+    def test_options_are_not_stored(self):
+        self.read_term("awkward")
+
+        self.payloads()
+
+        stored = Exercise.objects.get(term=self.term, variant=0).payload
+        self.assertNotIn("options", stored)
+        self.assertEqual(stored["wrong"], [])
+        self.assertEqual(len(self.provider.calls), 1)

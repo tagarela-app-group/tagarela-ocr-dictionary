@@ -1,5 +1,6 @@
 import uuid
 from datetime import UTC, timedelta
+from itertools import pairwise
 
 from django.test import SimpleTestCase, override_settings
 from django.utils import timezone
@@ -276,6 +277,52 @@ class ReviewSessionTests(APITestCase):
 
         self.assertEqual(self.session("")["rounds"][0]["kind"], "listen_write")
 
+    def test_reply_needs_four_read_terms(self):
+        for index in range(3):
+            reviewed_term(self.user, f"term {index}", self.course)
+        make_term(self.user, "never read", course=self.course)
+
+        session = self.session("?kinds=listen_write&kinds=reply")
+
+        self.assertEqual(session["kinds"], ["listen_write"])
+        self.assertEqual({r["kind"] for r in session["rounds"]}, {"listen_write"})
+
+    def test_reply_stays_out_of_new_terms_and_retests(self):
+        for index in range(3):
+            reviewed_term(self.user, f"read {index}", self.course, overdue_days=-5)
+        first_review_term(self.user, "first", self.course)
+        reviewed_term(self.user, "short", self.course, interval_days=3.0)
+        retest = reviewed_term(self.user, "retest", self.course, overdue_days=0.1)
+        attempted(retest, points=1)
+
+        session = self.session("?kinds=reply&kinds=listen_write")
+
+        self.assertEqual(set(session["kinds"]), {"reply", "listen_write"})
+        self.assertEqual(self.texts(session), ["retest", "short", "first"])
+        self.assertEqual({r["kind"] for r in session["rounds"]}, {"listen_write"})
+
+    def test_a_term_with_no_kind_that_fits_has_no_round(self):
+        for index in range(3):
+            reviewed_term(self.user, f"read {index}", self.course, overdue_days=-5)
+        first_review_term(self.user, "first", self.course)
+
+        session = self.session("?kinds=reply")
+
+        self.assertEqual((session["due"], session["rounds"]), (1, []))
+
+    def test_rounds_of_the_same_kind_stay_together(self):
+        Course.objects.filter(pk=self.course.pk).update(
+            review_capacity=10, daily_limit=10, last_active_on=local_today()
+        )
+        for index in range(10):
+            reviewed_term(self.user, f"term {index}", self.course)
+
+        kinds = [r["kind"] for r in self.session("?kinds=reply&kinds=listen_write")["rounds"]]
+
+        changes = sum(1 for before, after in pairwise(kinds) if before != after)
+        self.assertEqual(len(kinds), 10)
+        self.assertLessEqual(changes, 1)
+
     def test_date_too_far_from_the_server_is_rejected(self):
         far = local_today() + timedelta(days=5)
 
@@ -451,6 +498,40 @@ class ReviewAttemptTests(APITestCase):
                 attempt.local_date,
             ),
             (True, 2, 1, 3, 9000, played_at, local_today()),
+        )
+
+    def reply_exercise(self, mode: str) -> Exercise:
+        return Exercise.objects.create(
+            term=self.term,
+            kind=Exercise.Kind.REPLY,
+            variant=0,
+            payload={"mode": mode},
+            prompt_version="1.0",
+            model="m",
+        )
+
+    def test_reply_is_worth_reading_except_for_the_audio(self):
+        for mode, points in (("use", 10), ("audio", 15)):
+            exercise = self.reply_exercise(mode)
+
+            response = self.attempt(kind="reply", exercise=str(exercise.id))
+
+            self.assertAlmostEqual(response.json()["effect"]["points"], points)
+            ReviewAttempt.objects.all().delete()
+            exercise.delete()
+
+    def test_one_wrong_tap_does_not_bring_the_term_back_the_same_day(self):
+        exercise = self.reply_exercise("use")
+
+        response = self.attempt(kind="reply", exercise=str(exercise.id), outcome="slip", errors=1)
+
+        effect = response.json()["effect"]
+        self.assertAlmostEqual(effect["points"], 5)
+        self.assertEqual(effect["rating"], "fair")
+        self.term.refresh_from_db()
+        self.assertAlmostEqual(self.term.interval_days, 5.5, delta=0.01)
+        self.assertAlmostEqual(
+            (self.term.due_at - timezone.now()).total_seconds() / 86400, 5.5, delta=0.01
         )
 
     def test_slow_voice_takes_points_but_not_ease(self):

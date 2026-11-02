@@ -9,6 +9,7 @@ from apps.vocabulary.models import Term
 class ReviewAttempt(models.Model):
     class Outcome(models.TextChoices):
         FIRST = "first", "De primeira"
+        SLIP = "slip", "Errou uma vez"
         RETRY = "retry", "Depois de errar"
         HINT = "hint", "Com dica"
         MISSED = "missed", "Viu a resposta"

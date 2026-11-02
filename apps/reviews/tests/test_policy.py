@@ -22,6 +22,8 @@ class ScoreTests(SimpleTestCase):
             (20, play(effort=Effort.PRODUCE)),
             (8, play(effort=Effort.READ, seen=True)),
             (7.5, play(outcome="hint")),
+            (7.5, play(outcome="slip")),
+            (5, play(effort=Effort.READ, outcome="slip")),
             (4.5, play(outcome="retry")),
             (3, play(effort=Effort.READ, outcome="retry")),
             (0, play(outcome="missed")),

@@ -15,7 +15,7 @@ from apps.captures.tests.helpers import make_capture, make_user
 from apps.cards.models import TermCard
 from apps.courses.models import Course
 from apps.courses.tests.helpers import make_course
-from apps.exercises.tests.helpers import StubProvider
+from apps.exercises.tests.helpers import REPLY_ITEMS, StubProvider
 from apps.language_analysis.tests.helpers import VALID_ANALYSIS
 from apps.vocabulary.models import Term
 from apps.vocabulary.tests.helpers import make_group, make_term
@@ -136,6 +136,15 @@ class AppContractTests(APITestCase):
             response = self.client.get(f"/api/v1/terms/{term.id}/exercises/listen_write")
 
         self.assert_matches(self.example("exercises"), response)
+
+    def test_reply_exercises(self) -> None:
+        term = make_term(self.user, "on the fence", course=self.course)
+        provider = StubProvider({"items": REPLY_ITEMS})
+
+        with patch("apps.exercises.services.GeminiProvider", return_value=provider):
+            response = self.client.get(f"/api/v1/terms/{term.id}/exercises/reply")
+
+        self.assert_matches(self.example("exercises_reply"), response)
 
     def test_review_session(self) -> None:
         now = timezone.now()

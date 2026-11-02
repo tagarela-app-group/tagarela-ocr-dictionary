@@ -99,4 +99,5 @@ class SessionSerializer(serializers.Serializer):
     waiting = serializers.IntegerField()
     unread = serializers.IntegerField()
     next_due_at = serializers.DateTimeField(allow_null=True)
+    kinds = serializers.ListField(child=serializers.CharField())
     rounds = RoundSerializer(many=True)

@@ -49,6 +49,7 @@ class ReviewService:
                 "waiting": 0,
                 "unread": 0,
                 "next_due_at": None,
+                "kinds": [],
                 "rounds": [],
             }
 
@@ -61,14 +62,11 @@ class ReviewService:
 
         retests = {term.pk for term in plan.retests}
         terms = [*plan.retests, *plan.overdue, *plan.first_reviews]
-        rounds = []
-        if kinds:
-            rounds = [
-                {"term": term, "kind": self.rng.choice(kinds), "retest": term.pk in retests}
-                for term in terms[: settings.REVIEW_SESSION_SIZE]
-            ]
-
         studied = self._terms(course)
+        read_terms = studied.filter(first_read_at__isnull=False).count()
+        available = [kind for kind in kinds if KINDS[kind].available(read_terms)]
+        rounds = self._rounds(terms[: settings.REVIEW_SESSION_SIZE], available, retests)
+
         return {
             "due": len(terms),
             "limit": course.daily_limit,
@@ -76,8 +74,20 @@ class ReviewService:
             "waiting": plan.waiting,
             "unread": studied.filter(first_read_at__isnull=True).count(),
             "next_due_at": studied.filter(due_at__gt=now).aggregate(Min("due_at"))["due_at__min"],
+            "kinds": available,
             "rounds": rounds,
         }
+
+    def _rounds(self, terms: list[Term], kinds: list[str], retests: set) -> list[dict]:
+        rounds = []
+        for term in terms:
+            retest = term.pk in retests
+            allowed = [kind for kind in kinds if KINDS[kind].fits(term.interval_days, retest)]
+            if allowed:
+                rounds.append({"term": term, "kind": self.rng.choice(allowed), "retest": retest})
+
+        blocks = list(dict.fromkeys(round_["kind"] for round_ in rounds))
+        return sorted(rounds, key=lambda round_: blocks.index(round_["kind"]))
 
     def ask_for_more(self, course: Course | None) -> None:
         if course is not None:
@@ -131,7 +141,7 @@ class ReviewService:
         role = self._role(term, played_at, local_date)
         result = policy.score(
             policy.Play(
-                effort=KINDS[data["kind"]].effort,
+                effort=KINDS[data["kind"]].effort_of(exercise.payload if exercise else None),
                 outcome=data["outcome"],
                 seen_sentence=seen,
                 used_slow=data["used_slow"],

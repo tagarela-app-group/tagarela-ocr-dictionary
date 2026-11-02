@@ -1,3 +1,5 @@
+import random
+
 from django.conf import settings
 from django.http import Http404
 
@@ -13,8 +15,9 @@ from apps.vocabulary.models import Term
 
 
 class ExerciseService:
-    def __init__(self, provider: GeminiProvider | None = None):
+    def __init__(self, provider: GeminiProvider | None = None, rng: random.Random | None = None):
         self.provider = provider or GeminiProvider()
+        self.rng = rng or random.Random()
 
     def exercises(self, user, term_id, kind: str) -> list[Exercise]:
         if kind not in KINDS:
@@ -25,7 +28,12 @@ class ExerciseService:
         if term is None:
             raise Http404
 
-        return self._stored(term, kind) or self._generate(term, kind)
+        exercises = self._stored(term, kind) or self._generate(term, kind)
+        served = KINDS[kind].serve(term, [exercise.payload for exercise in exercises], self.rng)
+        for exercise, payload in zip(exercises, served, strict=True):
+            exercise.payload = payload
+
+        return exercises
 
     def _stored(self, term: Term, kind: str) -> list[Exercise]:
         return list(Exercise.objects.filter(term=term, kind=kind))
